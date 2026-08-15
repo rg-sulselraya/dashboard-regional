@@ -115,12 +115,16 @@ function buildBranchLookup(rows) {
   const emailIndex = indexOf(["email"]);
   const nameIndex = indexOf(["nama siswa", "student"]);
   const branchIndex = indexOf(["cabang"]);
+  const statusIndex = indexOf(["status"]);
   const lookup = new Map();
+  lookup.branchTotals = {};
   if (branchIndex < 0) return lookup;
   rows.slice(1).forEach((row) => {
     const branch = String(row[branchIndex] || "").trim();
     if (!branch) return;
-    const isActive = String(row[indexOf(["status"])] || "").trim().toLowerCase() === "active";
+    if (/isi nama siswa|tanggal paid/i.test(branch)) return;
+    const isActive = String(row[statusIndex] || "").trim().toLowerCase() === "active";
+    if (isActive) lookup.branchTotals[branch] = (lookup.branchTotals[branch] || 0) + 1;
     const email = normalizeLookup(row[emailIndex]);
     const name = normalizeLookup(row[nameIndex]);
     const setBranch = (key) => {
@@ -203,7 +207,7 @@ function buildAttendanceData(rows, branchLookup = new Map()) {
     });
   });
   const weeks = [...weekMap.values()].sort(comparePeriod);
-  return { generatedFrom: `Google Sheets ${new Date().toISOString()}`, studentCount: students.length, weekCount: weeks.length, students, weeks, studentWeeks, records };
+  return { generatedFrom: `Google Sheets ${new Date().toISOString()}`, studentCount: students.length, weekCount: weeks.length, branchTotals: branchLookup.branchTotals || {}, students, weeks, studentWeeks, records };
 }
 
 (async () => {

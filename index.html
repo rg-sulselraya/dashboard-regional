@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitoring Kesiswaan Sulsel Raya</title>
-  <script src="chart.umd.min.js?v=20260815l"></script>
-  <script src="attendance-data.js?v=20260815l"></script>
-  <script src="drill-data.js?v=20260815l"></script>
+  <script src="chart.umd.min.js?v=20260815v"></script>
+  <script src="attendance-data.js?v=20260815v"></script>
+  <script src="drill-data.js?v=20260815v"></script>
   <style>
     :root {
       --bg: #eef8fd;
@@ -29,17 +29,21 @@
     header { background: linear-gradient(135deg, var(--blue), var(--green)); color: #fff; position: sticky; top: 0; z-index: 10; box-shadow: 0 10px 30px rgba(0, 127, 199, 0.22); }
     .wrap { width: min(1440px, calc(100% - 32px)); margin: 0 auto; }
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 7px 0 6px; }
-    .header-side { width: 330px; display: grid; gap: 8px; }
+    .header-side { width: 320px; display: grid; gap: 8px; }
     .brand { display: flex; align-items: center; gap: 14px; }
     h1 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: 0; }
     h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
     .subtitle { margin-top: 2px; color: rgba(255, 255, 255, 0.86); font-size: 12px; }
     .actions, .table-tools { display: flex; gap: 10px; align-items: center; }
     .nav-spacer { flex: 1 1 auto; min-width: 12px; }
-    .nav-actions { margin-left: 0; display: grid; grid-template-columns: minmax(220px, 320px) 112px 112px; align-items: end; gap: 10px; }
+    .nav-actions { margin-left: 0; display: grid; grid-template-columns: 112px 112px 320px; align-items: end; gap: 10px; }
     .nav-actions button { min-width: 112px; }
     .branch-filter { display: grid; gap: 3px; color: rgba(255, 255, 255, 0.88); font-size: 10px; line-height: 1; font-weight: 800; }
-    .branch-filter select { height: 35px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.94); color: var(--ink); font: inherit; font-size: 12px; font-weight: 750; }
+    .branch-filter select { height: 35px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.14); color: #000000; font: inherit; font-size: 12px; font-weight: 750; }
+    .branch-filter select option { color: var(--ink); background: #fff; }
+    .nav-actions button.refresh, .nav-actions button.danger { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.45); box-shadow: none; }
+    .nav-actions button.refresh { color: #000000; }
+    .nav-actions button.danger { color: #000000; }
     .live-status { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.38); border-radius: 8px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 12px; font-weight: 850; box-shadow: 0 8px 22px rgba(19, 32, 47, 0.12); white-space: nowrap; }
     .live-dot { width: 11px; height: 11px; border-radius: 999px; background: #5ee4a0; box-shadow: 0 0 0 4px rgba(94, 228, 160, 0.14); }
     .nav-tabs { display: flex; align-items: end; gap: 8px; padding: 0 0 8px; overflow-x: auto; }
@@ -76,7 +80,14 @@
     .stat .label { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
     .stat .value { margin-top: 8px; font-size: 30px; font-weight: 850; line-height: 1.05; }
     .stat .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
-
+    .stat .hint .coverage-percent { font-weight: 900; }
+    .stat .hint .coverage-percent.low { color: var(--red); }
+    .stat .hint .coverage-percent.mid { color: var(--muted); }
+    .stat .hint .coverage-percent.high { color: var(--green); }
+    .stat .hint .attendance-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 900; vertical-align: middle; }
+    .stat .hint .attendance-badge.low { color: #ffffff; background: var(--red); }
+    .stat .hint .attendance-badge.mid { color: var(--ink); background: rgba(255, 255, 255, 0.9); border: 1px solid var(--line); }
+    .stat .hint .attendance-badge.high { color: #ffffff; background: var(--green); }
     .grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); min-width: 0; overflow: hidden; }
     .view[hidden] { display: none; }
@@ -260,9 +271,9 @@
       <button class="nav-tab" data-view="prepostView">Pre test & Post test Siswa</button>
       <div class="nav-spacer" aria-hidden="true"></div>
       <div class="actions nav-actions">
-        <label class="branch-filter" aria-label="Filter cabang"><select id="branchSelect"></select></label>
         <button class="refresh" id="refreshBtn">Refresh</button>
         <button class="danger" id="resetBtn">Reset</button>
+        <label class="branch-filter" aria-label="Filter cabang"><select id="branchSelect"></select></label>
       </div>
     </nav>
   </header>
@@ -284,7 +295,7 @@
     </section>
 
     <section class="stats" aria-label="Ringkasan">
-      <div class="stat"><div class="label" id="primaryCountLabel">Siswa</div><div class="value" id="studentCount">0</div><div class="hint">sesuai filter</div></div>
+      <div class="stat"><div class="label" id="primaryCountLabel">Siswa</div><div class="value" id="studentCount">0</div><div class="hint" id="studentCountHint">sesuai filter</div></div>
       <div class="stat"><div class="label">Sesi Ideal</div><div class="value ideal" id="idealCount">0</div><div class="hint">sesi wajib hadir</div></div>
       <div class="stat"><div class="label">Hadir</div><div class="value good" id="presentCount">0</div><div class="hint" id="presentHint">0%</div></div>
       <div class="stat"><div class="label">Izin</div><div class="value permit" id="permitCount">0</div><div class="hint">hari izin</div></div>
@@ -616,8 +627,7 @@
     function fillOptions() {
       $("dataSubtitle").textContent = `${numberFmt.format(data.students.length)} siswa, ${numberFmt.format(data.weeks.length)} periode bulan/week, ${numberFmt.format(data.records.length)} entri presensi`;
       $("branchSelect").innerHTML = `<option value="">Semua cabang</option>` + branches.map((branch) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
-      $("classSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
-      $("tableClassSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
+      updateClassOptions();
       $("monthSelect").innerHTML = `<option value="">Semua bulan</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
       $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weekNames.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
       $("periodSelect").innerHTML = `<option value="">Semua bulan/week</option>` + data.weeks.map((period) => `<option value="${escapeHtml(period.key)}">${escapeHtml(period.label)}</option>`).join("");
@@ -633,11 +643,33 @@
         $("periodSelect").value = "";
       }
       if (event.target.id === "branchSelect") {
+        updateClassOptions();
+        fillDrillFilters();
         updateStudentSuggestions();
         updateDrillStudentOptions();
       }
       updateAttendancePaidDate();
       render();
+    }
+
+    function classesForBranch(branch) {
+      return [...new Set(data.students
+        .filter((student) => !branch || student.branch === branch)
+        .map((student) => student.class)
+        .filter(Boolean))]
+        .sort(compareClass);
+    }
+
+    function updateClassOptions() {
+      const selectedBranch = $("branchSelect").value;
+      const branchClasses = classesForBranch(selectedBranch);
+      const options = `<option value="">Semua kelas</option>` + branchClasses.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
+      ["classSelect", "tableClassSelect"].forEach((id) => {
+        const select = $(id);
+        const current = select.value;
+        select.innerHTML = options;
+        select.value = branchClasses.includes(current) ? current : "";
+      });
     }
 
     function updateStudentSuggestions() {
@@ -823,16 +855,42 @@
         ? (filters.kelas ? 1 : rows.filter((row) => row.class && row.class !== "-").length)
         : new Set(rows.map((row) => row.studentId)).size;
       $("studentCount").textContent = numberFmt.format(primaryCount);
+      updateStudentCountHint(primaryCount, filters);
       $("idealCount").textContent = numberFmt.format(idealTotal);
       $("presentCount").textContent = numberFmt.format(totals.Hadir);
       $("permitCount").textContent = numberFmt.format(totals.Izin);
       $("sickCount").textContent = numberFmt.format(totals.Sakit);
       $("absentCount").textContent = numberFmt.format(totals.Alpa);
-      $("presentHint").textContent = `${presentRate}% dari sesi ideal`;
+      $("presentHint").innerHTML = `<span class="attendance-badge ${attendanceRateLevel(presentRate)}">${presentRate}%</span> dari sesi ideal`;
       $("periodLabel").textContent = periodText(filters);
       renderTable(rows);
       renderAbsences(records, filters);
       renderCharts(records, rows);
+    }
+
+    function updateStudentCountHint(primaryCount, filters) {
+      const hint = $("studentCountHint");
+      if (attendanceMode !== "student") {
+        hint.textContent = "sesuai filter";
+        return;
+      }
+      const branchTotal = filters.branch
+        ? (data.branchTotals?.[filters.branch] || 0)
+        : Object.values(data.branchTotals || {}).reduce((sum, total) => sum + (Number(total) || 0), 0);
+      if (!branchTotal) {
+        hint.textContent = "sesuai filter";
+        return;
+      }
+      const percent = Math.max(0, Math.min(100, Math.round((primaryCount / branchTotal) * 100)));
+      const level = percent < 90 ? "low" : percent < 98 ? "mid" : "high";
+      hint.innerHTML = `dari ${numberFmt.format(branchTotal)} siswa | <span class="coverage-percent ${level}">${percent}%</span>`;
+    }
+
+    function attendanceRateLevel(percent) {
+      const value = Math.max(0, Math.min(100, Number(percent) || 0));
+      if (value > 85) return "high";
+      if (value >= 75) return "mid";
+      return "low";
     }
 
     function countStatuses(records) {
@@ -1370,9 +1428,10 @@
     }
 
     function fillDrillFilters() {
+      const selectedBranch = $("branchSelect").value;
       const classes = [...new Set([
-        ...data.students.map((student) => student.class),
-        ...drillData.map((row) => row.class)
+        ...data.students.filter((student) => !selectedBranch || student.branch === selectedBranch).map((student) => student.class),
+        ...drillData.filter((row) => !selectedBranch || row.branch === selectedBranch).map((row) => row.class)
       ].filter(Boolean))].sort(compareClass);
       const months = [...new Set([
         ...data.weeks.map((week) => week.month),
@@ -1382,7 +1441,9 @@
         ...data.weeks.map((week) => week.week),
         ...drillData.map((row) => row.week)
       ].filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b));
+      const currentClass = $("drillClassSelect").value;
       $("drillClassSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
+      $("drillClassSelect").value = classes.includes(currentClass) ? currentClass : "";
       $("drillMonthSelect").innerHTML = `<option value="">Semua month</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
       $("drillWeekSelect").innerHTML = `<option value="">Semua week</option>` + weeks.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
       updateDrillStudentOptions();
@@ -2606,7 +2667,7 @@
         });
       });
       const weeks = [...weekMap.values()].sort(comparePeriod);
-      return { generatedFrom: "Google Sheets refresh", studentCount: students.length, weekCount: weeks.length, students, weeks, studentWeeks, records };
+      return { generatedFrom: "Google Sheets refresh", studentCount: students.length, weekCount: weeks.length, branchTotals: branchLookup.branchTotals || {}, students, weeks, studentWeeks, records };
     }
 
     function findAttendanceHeaderRow(rows) {
@@ -2699,11 +2760,14 @@
       const branchIndex = indexOf(["cabang"]);
       const statusIndex = indexOf(["status"]);
       const lookup = new Map();
+      lookup.branchTotals = {};
       if (branchIndex < 0) return lookup;
       rows.slice(1).forEach((row) => {
         const branch = String(row[branchIndex] || "").trim();
         if (!branch) return;
+        if (/isi nama siswa|tanggal paid/i.test(branch)) return;
         const isActive = String(row[statusIndex] || "").trim().toLowerCase() === "active";
+        if (isActive) lookup.branchTotals[branch] = (lookup.branchTotals[branch] || 0) + 1;
         const email = normalizeLookup(row[emailIndex]);
         const name = normalizeLookup(row[nameIndex]);
         const setBranch = (key) => {
