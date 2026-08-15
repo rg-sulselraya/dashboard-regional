@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitoring Kesiswaan Sulsel Raya</title>
-  <script src="chart.umd.min.js?v=20260815h"></script>
-  <script src="attendance-data.js?v=20260815h"></script>
-  <script src="drill-data.js?v=20260815h"></script>
+  <script src="chart.umd.min.js?v=20260815l"></script>
+  <script src="attendance-data.js?v=20260815l"></script>
+  <script src="drill-data.js?v=20260815l"></script>
   <style>
     :root {
       --bg: #eef8fd;
@@ -39,14 +39,14 @@
     .nav-actions { margin-left: 0; display: grid; grid-template-columns: minmax(220px, 320px) 112px 112px; align-items: end; gap: 10px; }
     .nav-actions button { min-width: 112px; }
     .branch-filter { display: grid; gap: 3px; color: rgba(255, 255, 255, 0.88); font-size: 10px; line-height: 1; font-weight: 800; }
-    .branch-filter select { height: 36px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.94); color: var(--ink); font: inherit; font-size: 12px; font-weight: 750; }
+    .branch-filter select { height: 35px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.94); color: var(--ink); font: inherit; font-size: 12px; font-weight: 750; }
     .live-status { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.38); border-radius: 8px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 12px; font-weight: 850; box-shadow: 0 8px 22px rgba(19, 32, 47, 0.12); white-space: nowrap; }
     .live-dot { width: 11px; height: 11px; border-radius: 999px; background: #5ee4a0; box-shadow: 0 0 0 4px rgba(94, 228, 160, 0.14); }
     .nav-tabs { display: flex; align-items: end; gap: 8px; padding: 0 0 8px; overflow-x: auto; }
-    .nav-tab { border-color: rgba(255, 255, 255, 0.45); background: rgba(255, 255, 255, 0.14); color: #fff; white-space: nowrap; }
+    .nav-tab { height: 35px; display: inline-flex; align-items: center; justify-content: center; border-color: rgba(255, 255, 255, 0.45); background: rgba(255, 255, 255, 0.14); color: #fff; white-space: nowrap; }
     .nav-tab.active { background: #F58220; color: #fff; border-color: #F58220; box-shadow: 0 8px 20px rgba(245, 130, 32, 0.24); }
     .rg-logo { width: 96px; height: auto; display: block; background: #fff; border-radius: 8px; padding: 4px 6px; box-shadow: 0 6px 18px rgba(19, 32, 47, 0.12); }
-    button { border: 1px solid var(--line); background: #fff; color: var(--ink); height: 36px; padding: 0 12px; border-radius: 8px; font-weight: 750; cursor: pointer; }
+    button { border: 1px solid var(--line); background: #fff; color: var(--ink); height: 35px; padding: 0 12px; border-radius: 8px; font-weight: 750; cursor: pointer; }
     button.primary { color: #fff; background: var(--blue-dark); border-color: var(--blue-dark); }
     button.refresh { color: var(--green); border-color: rgba(16, 185, 129, 0.28); }
     button.danger { color: var(--red); border-color: rgba(239, 68, 68, 0.28); }
@@ -84,7 +84,7 @@
     .placeholder h2 { color: var(--ink); font-size: 20px; margin-bottom: 8px; }
     .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--line); gap: 12px; background: #fbfdff; }
     .panel-head h2 { font-size: 18px; font-weight: 950; color: #0f1f33; }
-    .panel-head .table-tools input, .panel-head .table-tools select, .chart-controls select { min-height: 44px; border-color: #cfe0ec; font-size: 15px; font-weight: 850; }
+    .panel-head .table-tools input, .panel-head .table-tools select, .chart-controls select { min-height: 35px; border-color: #cfe0ec; font-size: 15px; font-weight: 850; }
     .panel-head .table-tools input { min-width: 230px; }
     .panel-head .table-tools select, .chart-controls select { min-width: 210px; }
     .chartbox { height: 360px; padding: 18px 22px 12px; }
@@ -260,7 +260,7 @@
       <button class="nav-tab" data-view="prepostView">Pre test & Post test Siswa</button>
       <div class="nav-spacer" aria-hidden="true"></div>
       <div class="actions nav-actions">
-        <label class="branch-filter">Cabang<select id="branchSelect"></select></label>
+        <label class="branch-filter" aria-label="Filter cabang"><select id="branchSelect"></select></label>
         <button class="refresh" id="refreshBtn">Refresh</button>
         <button class="danger" id="resetBtn">Reset</button>
       </div>
