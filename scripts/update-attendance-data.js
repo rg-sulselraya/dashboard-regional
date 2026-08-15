@@ -2,8 +2,9 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 
-const SHEET_ID = "18PBKyGq0ZZx8WQclEFmrSDsWZjCj3QyxF-uSKSemz-I";
+const SHEET_ID = "1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+const STUDENT_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("Data Siswa")}`;
 const OUT = path.join(__dirname, "..", "attendance-data.js");
 
 function fetchText(url) {
@@ -101,7 +102,46 @@ function normalizeStudentStatus(row) {
   return String(statusCell || "active").trim();
 }
 
-function buildAttendanceData(rows) {
+function normalizeLookup(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function buildBranchLookup(rows) {
+  const header = rows[0] || [];
+  const indexOf = (patterns) => header.findIndex((cell) => {
+    const label = normalizeLookup(cell);
+    return patterns.some((pattern) => label.includes(pattern));
+  });
+  const emailIndex = indexOf(["email"]);
+  const nameIndex = indexOf(["nama siswa", "student"]);
+  const branchIndex = indexOf(["cabang"]);
+  const lookup = new Map();
+  if (branchIndex < 0) return lookup;
+  rows.slice(1).forEach((row) => {
+    const branch = String(row[branchIndex] || "").trim();
+    if (!branch) return;
+    const isActive = String(row[indexOf(["status"])] || "").trim().toLowerCase() === "active";
+    const email = normalizeLookup(row[emailIndex]);
+    const name = normalizeLookup(row[nameIndex]);
+    const setBranch = (key) => {
+      if (!key) return;
+      const current = lookup.get(key);
+      if (!current || isActive) lookup.set(key, { branch, isActive });
+    };
+    setBranch(email ? `email:${email}` : "");
+    setBranch(name ? `name:${name}` : "");
+  });
+  return lookup;
+}
+
+function branchForStudent(row, branchLookup) {
+  const email = normalizeLookup(row[1]);
+  const name = normalizeLookup(row[0]);
+  const branch = branchLookup.get(`email:${email}`)?.branch || branchLookup.get(`name:${name}`)?.branch || "";
+  return /isi nama siswa|tanggal paid/i.test(branch) ? "" : branch;
+}
+
+function buildAttendanceData(rows, branchLookup = new Map()) {
   const header = rows[0] || [];
   const dayrow = rows[1] || [];
   const monthMap = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
@@ -136,15 +176,16 @@ function buildAttendanceData(rows) {
   rows.slice(2).forEach((row, rowIndex) => {
     if (!String(row[0] || "").trim()) return;
     const studentId = rowIndex + 1;
-    const student = {
-      id: studentId,
-      name: String(row[0] || "").trim(),
-      email: String(row[1] || "").trim(),
-      class: String(row[2] || "").trim(),
-      paidDate: String(row[3] || "").trim(),
-      studyDays: String(row[4] || "").trim(),
-      status: normalizeStudentStatus(row)
-    };
+      const student = {
+        id: studentId,
+        name: String(row[0] || "").trim(),
+        email: String(row[1] || "").trim(),
+        class: String(row[2] || "").trim(),
+        branch: branchForStudent(row, branchLookup),
+        paidDate: String(row[3] || "").trim(),
+        studyDays: String(row[4] || "").trim(),
+        status: normalizeStudentStatus(row)
+      };
     students.push(student);
     blocks.forEach((block) => {
       const month = block.month;
@@ -152,12 +193,12 @@ function buildAttendanceData(rows) {
       const idealSessions = toNumber(row[block.idealIndex]);
       const weekKey = `${month}|${week}|${block.dateColumns[0].iso}`;
       weekMap.set(weekKey, { key: weekKey, month, week, start: block.dateColumns[0].iso, end: block.dateColumns[block.dateColumns.length - 1].iso, label: `${month} - ${week}`, order: block.order, weekOrder: weekNumber(week) });
-      studentWeeks.push({ studentId, student: student.name, class: student.class, month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns[block.dateColumns.length - 1].iso, idealSessions, periodOrder: block.order });
+      studentWeeks.push({ studentId, student: student.name, class: student.class, branch: student.branch, month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns[block.dateColumns.length - 1].iso, idealSessions, periodOrder: block.order });
       block.dateColumns.forEach((column) => {
         const raw = String(row[column.index] ?? "").trim();
         const status = statusKind(raw);
         if (!status) return;
-        records.push({ studentId, student: student.name, class: student.class, date: column.iso, dateLabel: column.label, day: column.day, raw, status, sessions: toNumber(raw), month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns[block.dateColumns.length - 1].iso, idealSessions, periodOrder: block.order });
+        records.push({ studentId, student: student.name, class: student.class, branch: student.branch, date: column.iso, dateLabel: column.label, day: column.day, raw, status, sessions: toNumber(raw), month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns[block.dateColumns.length - 1].iso, idealSessions, periodOrder: block.order });
       });
     });
   });
@@ -167,7 +208,8 @@ function buildAttendanceData(rows) {
 
 (async () => {
   const csv = await fetchText(CSV_URL);
-  const data = buildAttendanceData(parseCsv(csv));
+  const studentCsv = await fetchText(STUDENT_CSV_URL);
+  const data = buildAttendanceData(parseCsv(csv), buildBranchLookup(parseCsv(studentCsv)));
   if (data.weeks.length < 20 || data.records.length < 1000) {
     throw new Error(`Data looks incomplete: ${data.weeks.length} weeks, ${data.records.length} records`);
   }

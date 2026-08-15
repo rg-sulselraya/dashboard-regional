@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Monitoring Kesiswaan BAHER</title>
+  <title>Monitoring Kesiswaan Sulsel Raya</title>
   <script src="chart.umd.min.js?v=20260811b"></script>
   <script src="attendance-data.js?v=20260811b"></script>
   <script src="drill-data.js?v=20260811b"></script>
@@ -227,7 +227,7 @@
     <div class="access-card">
       <img src="ruangguru-logo.svg" alt="Ruangguru">
       <h2>Masukkan Kode Akses</h2>
-      <p>Gunakan kode akses untuk membuka Monitoring Kehadiran Siswa BAHER.</p>
+      <p>Gunakan kode akses untuk membuka Monitoring Kehadiran Siswa Sulsel Raya.</p>
       <form id="accessForm">
         <input id="accessCode" type="password" placeholder="Kode akses" autocomplete="current-password">
         <button class="primary" type="submit">Masuk</button>
@@ -240,7 +240,7 @@
       <div class="brand">
         <img class="rg-logo" src="ruangguru-logo.svg" alt="Ruangguru">
         <div>
-          <h1>Monitoring Kesiswaan BAHER</h1>
+          <h1>Monitoring Kesiswaan Sulsel Raya</h1>
           <div class="subtitle" id="dataSubtitle">Memuat data presensi...</div>
         </div>
       </div>
@@ -427,11 +427,11 @@
 
   <script>
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhfHMZOJZELgfkGcyFjL-GXjHYD9wseeo9PazOYqCr5i-knQLRtXo8lgGH0ywv8X3JSw/exec";
-    const LIVE_DATA_STORAGE_KEY = "baherLiveAttendanceData";
+    const APPS_SCRIPT_URL = "";
+    const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
     const LIVE_DATA_SCHEMA_VERSION = 3;
-    const LIVE_DRILL_STORAGE_KEY = "baherLiveDrillData";
-    const LIVE_DRILL_SCHEMA_VERSION = 2;
+    const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
+    const LIVE_DRILL_SCHEMA_VERSION = 4;
     const DASHBOARD_MIN_TODAY = localIsoDate();
     const USE_NETLIFY_PROXY = location.hostname.includes("netlify");
     let appsScriptDataPromise = null;
@@ -476,7 +476,7 @@
       }
     };
     let trendChart;
-    const ACCESS_CODE = "baher03";
+    const ACCESS_CODE = "regional01";
 
     const $ = (id) => document.getElementById(id);
     const inputIds = ["searchInput", "classSelect", "monthSelect", "weekSelect", "statusSelect", "periodSelect", "tableSearch", "sortSelect"];
@@ -563,14 +563,14 @@
     function initAccessGate() {
       const getAccess = () => {
         try {
-          return sessionStorage.getItem("baherAccess");
+          return sessionStorage.getItem("sulselRayaAccess");
         } catch (error) {
           return "";
         }
       };
       const setAccess = () => {
         try {
-          sessionStorage.setItem("baherAccess", "ok");
+          sessionStorage.setItem("sulselRayaAccess", "ok");
         } catch (error) {
           return false;
         }
@@ -2046,7 +2046,7 @@
           cleanup();
           reject(new Error("Fallback script failed"));
         };
-        script.src = `https://docs.google.com/spreadsheets/d/18PBKyGq0ZZx8WQclEFmrSDsWZjCj3QyxF-uSKSemz-I/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${encodeURIComponent(gid)}&cachebust=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${encodeURIComponent(gid)}&cachebust=${Date.now()}`;
         document.body.appendChild(script);
       });
     }

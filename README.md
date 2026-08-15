@@ -1,4 +1,4 @@
-# Dashboard Presensi Siswa BAHER
+# Dashboard Presensi Siswa Sulsel Raya
 
 Versi ini siap diunggah ke Netlify.
 

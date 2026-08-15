@@ -1,6 +1,10 @@
 exports.handler = async function handler(event) {
   const gid = event?.queryStringParameters?.gid || "0";
-  const url = `https://docs.google.com/spreadsheets/d/18PBKyGq0ZZx8WQclEFmrSDsWZjCj3QyxF-uSKSemz-I/export?format=csv&gid=${encodeURIComponent(gid)}`;
+  const sheet = event?.queryStringParameters?.sheet || "";
+  const base = "https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
+  const url = sheet
+    ? `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
+    : `${base}/export?format=csv&gid=${encodeURIComponent(gid)}`;
 
   try {
     const response = await fetch(url);

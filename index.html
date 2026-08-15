@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Monitoring Kesiswaan BAHER</title>
-  <script src="chart.umd.min.js?v=20260811d"></script>
-  <script src="attendance-data.js?v=20260811d"></script>
-  <script src="drill-data.js?v=20260811d"></script>
+  <title>Monitoring Kesiswaan Sulsel Raya</title>
+  <script src="chart.umd.min.js?v=20260815h"></script>
+  <script src="attendance-data.js?v=20260815h"></script>
+  <script src="drill-data.js?v=20260815h"></script>
   <style>
     :root {
       --bg: #eef8fd;
@@ -28,18 +28,21 @@
     body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
     header { background: linear-gradient(135deg, var(--blue), var(--green)); color: #fff; position: sticky; top: 0; z-index: 10; box-shadow: 0 10px 30px rgba(0, 127, 199, 0.22); }
     .wrap { width: min(1440px, calc(100% - 32px)); margin: 0 auto; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 10px 0 8px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 7px 0 6px; }
     .header-side { width: 330px; display: grid; gap: 8px; }
     .brand { display: flex; align-items: center; gap: 14px; }
     h1 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: 0; }
     h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
     .subtitle { margin-top: 2px; color: rgba(255, 255, 255, 0.86); font-size: 12px; }
     .actions, .table-tools { display: flex; gap: 10px; align-items: center; }
-    .nav-actions { margin-left: auto; width: 330px; }
-    .nav-actions button { flex: 1; }
+    .nav-spacer { flex: 1 1 auto; min-width: 12px; }
+    .nav-actions { margin-left: 0; display: grid; grid-template-columns: minmax(220px, 320px) 112px 112px; align-items: end; gap: 10px; }
+    .nav-actions button { min-width: 112px; }
+    .branch-filter { display: grid; gap: 3px; color: rgba(255, 255, 255, 0.88); font-size: 10px; line-height: 1; font-weight: 800; }
+    .branch-filter select { height: 36px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.94); color: var(--ink); font: inherit; font-size: 12px; font-weight: 750; }
     .live-status { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.38); border-radius: 8px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 12px; font-weight: 850; box-shadow: 0 8px 22px rgba(19, 32, 47, 0.12); white-space: nowrap; }
     .live-dot { width: 11px; height: 11px; border-radius: 999px; background: #5ee4a0; box-shadow: 0 0 0 4px rgba(94, 228, 160, 0.14); }
-    .nav-tabs { display: flex; align-items: center; gap: 8px; padding: 0 0 10px; overflow-x: auto; }
+    .nav-tabs { display: flex; align-items: end; gap: 8px; padding: 0 0 8px; overflow-x: auto; }
     .nav-tab { border-color: rgba(255, 255, 255, 0.45); background: rgba(255, 255, 255, 0.14); color: #fff; white-space: nowrap; }
     .nav-tab.active { background: #F58220; color: #fff; border-color: #F58220; box-shadow: 0 8px 20px rgba(245, 130, 32, 0.24); }
     .rg-logo { width: 96px; height: auto; display: block; background: #fff; border-radius: 8px; padding: 4px 6px; box-shadow: 0 6px 18px rgba(19, 32, 47, 0.12); }
@@ -229,7 +232,7 @@
     <div class="access-card">
       <img src="ruangguru-logo.svg" alt="Ruangguru">
       <h2>Masukkan Kode Akses</h2>
-      <p>Gunakan kode akses untuk membuka Monitoring Kehadiran Siswa BAHER.</p>
+      <p>Gunakan kode akses untuk membuka Monitoring Kehadiran Siswa Sulsel Raya.</p>
       <form id="accessForm">
         <input id="accessCode" type="password" placeholder="Kode akses" autocomplete="current-password">
         <button class="primary" type="submit">Masuk</button>
@@ -242,7 +245,7 @@
       <div class="brand">
         <img class="rg-logo" src="ruangguru-logo.svg" alt="Ruangguru">
         <div>
-          <h1>Monitoring Kesiswaan BAHER</h1>
+          <h1>Monitoring Kesiswaan Sulsel Raya</h1>
           <div class="subtitle" id="dataSubtitle">Memuat data presensi...</div>
         </div>
       </div>
@@ -255,10 +258,11 @@
       <button class="nav-tab" data-view="drillView">Drill Soal</button>
       <button class="nav-tab" data-view="tryoutView">Tryout Siswa</button>
       <button class="nav-tab" data-view="prepostView">Pre test & Post test Siswa</button>
+      <div class="nav-spacer" aria-hidden="true"></div>
       <div class="actions nav-actions">
+        <label class="branch-filter">Cabang<select id="branchSelect"></select></label>
         <button class="refresh" id="refreshBtn">Refresh</button>
         <button class="danger" id="resetBtn">Reset</button>
-        <button class="primary" id="downloadBtn">Unduh CSV</button>
       </div>
     </nav>
   </header>
@@ -429,11 +433,11 @@
 
   <script>
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhfHMZOJZELgfkGcyFjL-GXjHYD9wseeo9PazOYqCr5i-knQLRtXo8lgGH0ywv8X3JSw/exec";
-    const LIVE_DATA_STORAGE_KEY = "baherLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 5;
-    const LIVE_DRILL_STORAGE_KEY = "baherLiveDrillData";
-    const LIVE_DRILL_SCHEMA_VERSION = 2;
+    const APPS_SCRIPT_URL = "";
+    const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
+    const LIVE_DATA_SCHEMA_VERSION = 8;
+    const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
+    const LIVE_DRILL_SCHEMA_VERSION = 5;
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
     const USE_NETLIFY_PROXY = location.hostname.includes("netlify");
     let appsScriptDataPromise = null;
@@ -449,6 +453,7 @@
     let selectedDrillGrade = "12 SMA";
     let byId = new Map();
     let classes = [];
+    let branches = [];
     let months = [];
     let weekNames = [];
     const statusColors = { Hadir: "#10B981", Izin: "#F58220", Sakit: "#7c5ce7", Alpa: "#ef4444" };
@@ -479,10 +484,10 @@
       }
     };
     let trendChart;
-    const ACCESS_CODE = "baher03";
+    const ACCESS_CODE = "regional01";
 
     const $ = (id) => document.getElementById(id);
-    const inputIds = ["searchInput", "classSelect", "monthSelect", "weekSelect", "statusSelect", "periodSelect", "tableClassSelect", "tableSearch", "sortSelect"];
+    const inputIds = ["branchSelect", "searchInput", "classSelect", "monthSelect", "weekSelect", "statusSelect", "periodSelect", "tableClassSelect", "tableSearch", "sortSelect"];
 
     function localIsoDate(date = new Date()) {
       const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
@@ -501,7 +506,6 @@
         input.addEventListener("change", handleFilterInput);
       });
       $("resetBtn").addEventListener("click", resetFilters);
-      $("downloadBtn").addEventListener("click", downloadCsv);
       $("downloadPdfBtn").addEventListener("click", downloadStudentPdf);
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
       $("refreshBtn").addEventListener("click", refreshData);
@@ -567,14 +571,14 @@
     function initAccessGate() {
       const getAccess = () => {
         try {
-          return sessionStorage.getItem("baherAccess");
+          return sessionStorage.getItem("sulselRayaAccess");
         } catch (error) {
           return "";
         }
       };
       const setAccess = () => {
         try {
-          sessionStorage.setItem("baherAccess", "ok");
+          sessionStorage.setItem("sulselRayaAccess", "ok");
         } catch (error) {
           return false;
         }
@@ -604,18 +608,20 @@
     function rebuildIndexes() {
       byId = new Map(data.students.map((student) => [student.id, student]));
       classes = [...new Set(data.students.map((student) => student.class).filter(Boolean))].sort(compareClass);
+      branches = [...new Set(data.students.map((student) => student.branch).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
       months = [...new Set(data.weeks.map((week) => week.month).filter(Boolean))];
       weekNames = [...new Set(data.weeks.map((week) => week.week).filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b));
     }
 
     function fillOptions() {
       $("dataSubtitle").textContent = `${numberFmt.format(data.students.length)} siswa, ${numberFmt.format(data.weeks.length)} periode bulan/week, ${numberFmt.format(data.records.length)} entri presensi`;
+      $("branchSelect").innerHTML = `<option value="">Semua cabang</option>` + branches.map((branch) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
       $("classSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
       $("tableClassSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
       $("monthSelect").innerHTML = `<option value="">Semua bulan</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
       $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weekNames.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
       $("periodSelect").innerHTML = `<option value="">Semua bulan/week</option>` + data.weeks.map((period) => `<option value="${escapeHtml(period.key)}">${escapeHtml(period.label)}</option>`).join("");
-      $("studentSuggestions").innerHTML = data.students.map((student) => `<option value="${escapeHtml(student.name)}"></option>`).join("");
+      updateStudentSuggestions();
     }
 
     function handleFilterInput(event) {
@@ -626,8 +632,22 @@
       if ((event.target.id === "monthSelect" || event.target.id === "weekSelect") && event.target.value) {
         $("periodSelect").value = "";
       }
+      if (event.target.id === "branchSelect") {
+        updateStudentSuggestions();
+        updateDrillStudentOptions();
+      }
       updateAttendancePaidDate();
       render();
+    }
+
+    function updateStudentSuggestions() {
+      const selectedBranch = $("branchSelect").value;
+      const students = data.students
+        .filter((student) => !selectedBranch || student.branch === selectedBranch)
+        .map((student) => student.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "id"));
+      $("studentSuggestions").innerHTML = students.map((student) => `<option value="${escapeHtml(student)}"></option>`).join("");
     }
 
     function updateAttendancePaidDate() {
@@ -652,6 +672,7 @@
     function currentFilters() {
       return {
         search: $("searchInput").value.trim().toLowerCase(),
+        branch: $("branchSelect").value,
         kelas: $("classSelect").value || $("tableClassSelect").value,
         month: $("monthSelect").value,
         week: $("weekSelect").value,
@@ -668,6 +689,7 @@
       const start = itemWeekStart(item);
       if (start && start > DASHBOARD_MIN_TODAY) return false;
       if (filters.search && !`${student.name} ${student.email}`.toLowerCase().includes(filters.search)) return false;
+      if (filters.branch && student.branch !== filters.branch) return false;
       if (filters.kelas && student.class !== filters.kelas) return false;
       if (filters.period && item.weekKey !== filters.period) return false;
       if (filters.month && item.month !== filters.month) return false;
@@ -1297,7 +1319,8 @@
 
       return rows.map((row) => {
         const student = valueAt(row, nameIndex);
-        const studentClass = classFromStudent(student) || normalizeDrillClass(valueAt(row, classIndex));
+        const studentRecord = studentFromName(student);
+        const studentClass = studentRecord?.class || normalizeDrillClass(valueAt(row, classIndex));
         const rawDate = valueAt(row, dateIndex);
         if (!student || !studentClass || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
         const correct = toNumber(valueAt(row, correctIndex));
@@ -1310,6 +1333,7 @@
         return {
           student,
           class: studentClass,
+          branch: studentRecord?.branch || "",
           subject: normalizeDrillMaterial(valueAt(row, subjectIndex)),
           topic: normalizeDrillMaterial(valueAt(row, topicIndex)),
           date,
@@ -1365,9 +1389,10 @@
     }
 
     function updateDrillStudentOptions() {
+      const selectedBranch = $("branchSelect").value;
       const students = [...new Set([
-        ...data.students.map((student) => student.name),
-        ...drillData.map((row) => row.student)
+        ...data.students.filter((student) => !selectedBranch || student.branch === selectedBranch).map((student) => student.name),
+        ...drillData.filter((row) => !selectedBranch || row.branch === selectedBranch).map((row) => row.student)
       ].filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
       const current = $("drillStudentInput").value;
       $("drillStudentSuggestions").innerHTML = students.map((student) => `<option value="${escapeHtml(student)}"></option>`).join("");
@@ -1379,9 +1404,11 @@
       const selectedClass = drillMode === "student" ? (selectedStudentRecord?.class || "") : $("drillClassSelect").value;
       const selectedMonth = $("drillMonthSelect").value;
       const selectedWeek = $("drillWeekSelect").value;
+      const selectedBranch = $("branchSelect").value;
       $("drillAutoClassInput").value = selectedClass || "";
       const rows = drillData.filter((row) => {
         if (selectedStudent && !row.student.toLowerCase().includes(selectedStudent)) return false;
+        if (selectedBranch && row.branch !== selectedBranch) return false;
         if (drillMode === "class" && selectedClass && row.class !== selectedClass) return false;
         if (selectedMonth && row.month !== selectedMonth) return false;
         if (selectedWeek && row.week !== selectedWeek) return false;
@@ -1867,8 +1894,12 @@
     }
 
     function classFromStudent(studentName) {
-      const student = data.students.find((item) => item.name.toLowerCase() === String(studentName || "").trim().toLowerCase());
-      return student?.class || "";
+      return studentFromName(studentName)?.class || "";
+    }
+
+    function studentFromName(studentName) {
+      const search = String(studentName || "").trim().toLowerCase();
+      return data.students.find((item) => item.name.toLowerCase() === search) || null;
     }
 
     function normalizeDrillClass(value) {
@@ -2009,6 +2040,7 @@
       $("statusSelect").value = "";
       $("periodSelect").value = "";
       $("tableClassSelect").value = "";
+      $("branchSelect").value = "";
       $("tableSearch").value = "";
       $("sortSelect").value = "monthWeek:asc";
       render();
@@ -2028,7 +2060,8 @@
       try {
         appsScriptDataPromise = null;
         const refreshTime = new Date();
-        const refreshedData = normalizeData(buildAttendanceData(await loadSheetRows("0")));
+        const branchLookup = buildBranchLookup(await loadSheetRowsByName("Data Siswa"));
+        const refreshedData = normalizeData(buildAttendanceData(await loadSheetRows("0"), branchLookup));
         const refreshedDrillData = buildDrillData(await loadSheetRows("246622240"));
         validateRefreshedAttendanceData(refreshedData);
         data = refreshedData;
@@ -2142,6 +2175,20 @@
       return loadSheetRowsFallback(gid);
     }
 
+    async function loadSheetRowsByName(sheetName) {
+      if (USE_NETLIFY_PROXY) {
+        try {
+          const response = await fetch(`${SHEET_PROXY_URL}?sheet=${encodeURIComponent(sheetName)}&cachebust=${Date.now()}`, { cache: "no-store" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return parseCsv(await response.text());
+        } catch (error) {
+          console.warn("Netlify sheet refresh failed, falling back:", error);
+        }
+      }
+      return loadSheetRowsFallback("0", sheetName);
+    }
+
+
     async function loadSheetRowsFromAppsScript(gid) {
       if (!appsScriptDataPromise) {
         appsScriptDataPromise = fetch(`${APPS_SCRIPT_URL}?cachebust=${Date.now()}`, { cache: "no-store" })
@@ -2155,7 +2202,7 @@
       return payload?.sheets?.attendance || [];
     }
 
-    function loadSheetRowsFallback(gid) {
+    function loadSheetRowsFallback(gid, sheetName = "") {
       return new Promise((resolve, reject) => {
         const callbackName = `sheetFallback_${gid}_${Date.now()}`.replace(/\D/g, "_");
         const script = document.createElement("script");
@@ -2177,7 +2224,8 @@
           cleanup();
           reject(new Error("Fallback script failed"));
         };
-        script.src = `https://docs.google.com/spreadsheets/d/18PBKyGq0ZZx8WQclEFmrSDsWZjCj3QyxF-uSKSemz-I/gviz/tq?tqx=out:json;responseHandler:${callbackName};reqId:${Date.now()}&headers=0&gid=${encodeURIComponent(gid)}&cachebust=${Date.now()}`;
+        const sheetParam = sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : `&gid=${encodeURIComponent(gid)}`;
+        script.src = `https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU/gviz/tq?tqx=out:json;responseHandler:${callbackName};reqId:${Date.now()}&headers=0${sheetParam}&cachebust=${Date.now()}`;
         document.body.appendChild(script);
       });
     }
@@ -2494,14 +2542,15 @@
       };
     }
 
-    function buildAttendanceData(rows) {
+    function buildAttendanceData(rows, branchLookup = new Map()) {
       const headerRowIndex = findAttendanceHeaderRow(rows);
       const header = rows[headerRowIndex] || [];
       const dayrow = rows[headerRowIndex + 1] || [];
       const monthMap = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
       const blocks = [];
       header.forEach((cell, index) => {
-        if (String(cell).trim() !== "Month" || String(header[index + 2] || "").trim() !== "Jumlah Sesi Ideal") return;
+        const isMonthBlock = String(cell).trim() === "Month" && String(header[index + 1] || "").trim() === "Week";
+        if (!isMonthBlock) return;
         const dateColumns = [];
         for (let column = index + 3; column < Math.min(index + 9, header.length); column += 1) {
           const dateInfo = sheetDateInfo(header[column], monthMap);
@@ -2535,6 +2584,7 @@
           name: String(row[0] || "").trim(),
           email: String(row[1] || "").trim(),
           class: String(row[2] || "").trim(),
+          branch: branchForStudent(row, branchLookup),
           paidDate: String(row[3] || "").trim(),
           studyDays: String(row[4] || "").trim(),
           status: normalizeStudentStatus(row)
@@ -2546,12 +2596,12 @@
           const idealSessions = toNumber(row[block.idealIndex]);
           const weekKey = `${month}|${week}|${block.dateColumns[0].iso}`;
           weekMap.set(weekKey, { key: weekKey, month, week, start: block.dateColumns[0].iso, end: block.dateColumns.at(-1).iso, label: `${month} - ${week}`, order: block.order, weekOrder: weekNumber(week) });
-          studentWeeks.push({ studentId, student: student.name, class: student.class, month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns.at(-1).iso, idealSessions, periodOrder: block.order });
+          studentWeeks.push({ studentId, student: student.name, class: student.class, branch: student.branch, month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns.at(-1).iso, idealSessions, periodOrder: block.order });
           block.dateColumns.forEach((column) => {
             const raw = String(row[column.index] ?? "").trim();
             const status = statusKind(raw);
             if (!status) return;
-            records.push({ studentId, student: student.name, class: student.class, date: column.iso, dateLabel: column.label, day: column.day, raw, status, sessions: toNumber(raw), month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns.at(-1).iso, idealSessions, periodOrder: block.order });
+            records.push({ studentId, student: student.name, class: student.class, branch: student.branch, date: column.iso, dateLabel: column.label, day: column.day, raw, status, sessions: toNumber(raw), month, week, weekKey, weekStart: block.dateColumns[0].iso, weekEnd: block.dateColumns.at(-1).iso, idealSessions, periodOrder: block.order });
           });
         });
       });
@@ -2632,6 +2682,46 @@
     function normalizeStudentStatus(row) {
       const statusCell = row.find((cell, index) => index > 4 && ["active", "aktif", "inactive", "non active", "nonaktif"].includes(String(cell || "").trim().toLowerCase()));
       return String(statusCell || "active").trim();
+    }
+
+    function normalizeLookup(value) {
+      return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function buildBranchLookup(rows) {
+      const header = rows[0] || [];
+      const indexOf = (patterns) => header.findIndex((cell) => {
+        const label = normalizeLookup(cell);
+        return patterns.some((pattern) => label.includes(pattern));
+      });
+      const emailIndex = indexOf(["email"]);
+      const nameIndex = indexOf(["nama siswa", "student"]);
+      const branchIndex = indexOf(["cabang"]);
+      const statusIndex = indexOf(["status"]);
+      const lookup = new Map();
+      if (branchIndex < 0) return lookup;
+      rows.slice(1).forEach((row) => {
+        const branch = String(row[branchIndex] || "").trim();
+        if (!branch) return;
+        const isActive = String(row[statusIndex] || "").trim().toLowerCase() === "active";
+        const email = normalizeLookup(row[emailIndex]);
+        const name = normalizeLookup(row[nameIndex]);
+        const setBranch = (key) => {
+          if (!key) return;
+          const current = lookup.get(key);
+          if (!current || isActive) lookup.set(key, { branch, isActive });
+        };
+        setBranch(email ? `email:${email}` : "");
+        setBranch(name ? `name:${name}` : "");
+      });
+      return lookup;
+    }
+
+    function branchForStudent(row, branchLookup) {
+      const email = normalizeLookup(row[1]);
+      const name = normalizeLookup(row[0]);
+      const branch = branchLookup.get(`email:${email}`)?.branch || branchLookup.get(`name:${name}`)?.branch || "";
+      return /isi nama siswa|tanggal paid/i.test(branch) ? "" : branch;
     }
 
     function toNumber(value) {

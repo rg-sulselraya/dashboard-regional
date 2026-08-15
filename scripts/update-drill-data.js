@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 
-const SHEET_ID = "18PBKyGq0ZZx8WQclEFmrSDsWZjCj3QyxF-uSKSemz-I";
+const SHEET_ID = "1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
 const GID = "246622240";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 const ATTENDANCE_IN = path.join(__dirname, "..", "attendance-data.js");
@@ -91,6 +91,11 @@ function toNumber(value) {
 function classFromStudent(studentName) {
   const student = students.find((item) => item.name.toLowerCase() === String(studentName || "").trim().toLowerCase());
   return student?.class || "";
+}
+
+function branchFromStudent(studentName) {
+  const student = students.find((item) => item.name.toLowerCase() === String(studentName || "").trim().toLowerCase());
+  return student?.branch || "";
 }
 
 function normalizeDrillClass(value) {
@@ -193,6 +198,7 @@ function buildDrillData(rows) {
     return {
       student,
       class: studentClass,
+      branch: branchFromStudent(student),
       subject: valueAt(row, subjectIndex) || "-",
       topic: valueAt(row, topicIndex) || "-",
       date,
