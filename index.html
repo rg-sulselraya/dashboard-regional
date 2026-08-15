@@ -39,11 +39,11 @@
     .nav-actions { margin-left: 0; display: grid; grid-template-columns: 112px 112px 320px; align-items: end; gap: 10px; }
     .nav-actions button { min-width: 112px; }
     .branch-filter { display: grid; gap: 3px; color: rgba(255, 255, 255, 0.88); font-size: 10px; line-height: 1; font-weight: 800; }
-    .branch-filter select { height: 35px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 8px; padding: 0 10px; background: rgba(255, 255, 255, 0.14); color: #000000; font: inherit; font-size: 12px; font-weight: 750; }
+    .branch-filter select { height: 35px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 8px; padding: 0 10px; background: #ffffff; color: #000000; font: inherit; font-size: 12px; font-weight: 750; }
     .branch-filter select option { color: var(--ink); background: #fff; }
-    .nav-actions button.refresh, .nav-actions button.danger { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.45); box-shadow: none; }
-    .nav-actions button.refresh { color: #000000; }
-    .nav-actions button.danger { color: #000000; }
+    .nav-actions button.refresh, .nav-actions button.danger { background: #ffffff; border-color: rgba(255, 255, 255, 0.45); box-shadow: none; }
+    .nav-actions button.refresh { color: var(--green); }
+    .nav-actions button.danger { color: var(--red); }
     .live-status { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.38); border-radius: 8px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 12px; font-weight: 850; box-shadow: 0 8px 22px rgba(19, 32, 47, 0.12); white-space: nowrap; }
     .live-dot { width: 11px; height: 11px; border-radius: 999px; background: #5ee4a0; box-shadow: 0 0 0 4px rgba(94, 228, 160, 0.14); }
     .nav-tabs { display: flex; align-items: end; gap: 8px; padding: 0 0 8px; overflow-x: auto; }
@@ -496,6 +496,26 @@
     };
     let trendChart;
     const ACCESS_CODE = "regional01";
+    const ACCESS_BRANCH_CODES = {
+      "Bone-4827": "Bone - Ahmad Yani",
+      "Bulukumba-9154": "Bulukumba - Jend. Sudirman",
+      "Gowa-3068": "Gowa - Sungguminasa",
+      "Baruga-6741": "Makassar - Baruga",
+      "Cendrawasih-8295": "Makassar - Cendrawasih",
+      "Hertasning-1438": "Makassar - Hertasning",
+      "Perintis-5602": "Makassar - Perintis",
+      "Sudiang-7816": "Makassar - Sudiang",
+      "Palopo-2497": "Palopo - Andi Kambo",
+      "Pangkep-6380": "Pangkep - Sultan Hasanuddin",
+      "Parepare-4073": "Parepare - Mattirotasi",
+      "Pinrang-8521": "Pinrang - Jend. Sudirman",
+      "Sidrap-1946": "Sidrap - Jenderal Sudirman",
+      "Soppeng-7259": "Soppeng - Lalabata",
+      "Toraja-3184": "Tana Toraja - Makale",
+      "Torut-9062": "Toraja Utara - Poros Bolu",
+      "Wajo-5713": "Wajo - Jend. Sudirman"
+    };
+    let lockedBranch = "";
 
     const $ = (id) => document.getElementById(id);
     const inputIds = ["branchSelect", "searchInput", "classSelect", "monthSelect", "weekSelect", "statusSelect", "periodSelect", "tableClassSelect", "tableSearch", "sortSelect"];
@@ -595,20 +615,57 @@
         }
         return true;
       };
+      const getLockedBranch = () => {
+        try {
+          return sessionStorage.getItem("sulselRayaBranch") || "";
+        } catch (error) {
+          return "";
+        }
+      };
+      const setLockedBranch = (branch) => {
+        try {
+          if (branch) sessionStorage.setItem("sulselRayaBranch", branch);
+          else sessionStorage.removeItem("sulselRayaBranch");
+        } catch (error) {
+          return false;
+        }
+        return true;
+      };
+      const applyLockedBranch = () => {
+        lockedBranch = getLockedBranch();
+        $("branchSelect").disabled = Boolean(lockedBranch);
+        if (lockedBranch) $("branchSelect").value = lockedBranch;
+      };
 
       if (getAccess() === "ok") {
         document.body.classList.remove("locked");
         $("accessScreen").hidden = true;
         $("accessScreen").style.display = "none";
+        applyLockedBranch();
       }
       $("accessForm").addEventListener("submit", (event) => {
         event.preventDefault();
-        if ($("accessCode").value.trim() === ACCESS_CODE) {
+        const code = $("accessCode").value.trim();
+        const branch = ACCESS_BRANCH_CODES[code];
+        if (code === ACCESS_CODE) {
           setAccess();
+          setLockedBranch("");
+          lockedBranch = "";
+          $("accessScreen").hidden = true;
+          $("accessScreen").style.display = "none";
+          document.body.classList.remove("locked");
+          $("branchSelect").disabled = false;
+          $("accessError").textContent = "";
+        } else if (branch) {
+          setAccess();
+          setLockedBranch(branch);
+          lockedBranch = branch;
           $("accessScreen").hidden = true;
           $("accessScreen").style.display = "none";
           document.body.classList.remove("locked");
           $("accessError").textContent = "";
+          applyLockedBranch();
+          render();
         } else {
           $("accessError").textContent = "Kode akses salah.";
           $("accessCode").select();
@@ -627,6 +684,8 @@
     function fillOptions() {
       $("dataSubtitle").textContent = `${numberFmt.format(data.students.length)} siswa, ${numberFmt.format(data.weeks.length)} periode bulan/week, ${numberFmt.format(data.records.length)} entri presensi`;
       $("branchSelect").innerHTML = `<option value="">Semua cabang</option>` + branches.map((branch) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+      $("branchSelect").disabled = Boolean(lockedBranch);
+      if (lockedBranch) $("branchSelect").value = lockedBranch;
       updateClassOptions();
       $("monthSelect").innerHTML = `<option value="">Semua bulan</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
       $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weekNames.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
@@ -881,7 +940,7 @@
         hint.textContent = "sesuai filter";
         return;
       }
-      const percent = Math.max(0, Math.min(100, Math.round((primaryCount / branchTotal) * 100)));
+      const percent = Math.max(0, Math.round((primaryCount / branchTotal) * 100));
       const level = percent < 90 ? "low" : percent < 98 ? "mid" : "high";
       hint.innerHTML = `dari ${numberFmt.format(branchTotal)} siswa | <span class="coverage-percent ${level}">${percent}%</span>`;
     }
@@ -2101,7 +2160,7 @@
       $("statusSelect").value = "";
       $("periodSelect").value = "";
       $("tableClassSelect").value = "";
-      $("branchSelect").value = "";
+      $("branchSelect").value = lockedBranch || "";
       $("tableSearch").value = "";
       $("sortSelect").value = "monthWeek:asc";
       render();
