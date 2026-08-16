@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitoring Kesiswaan Sulsel Raya</title>
-  <script src="chart.umd.min.js?v=20260815v"></script>
-  <script src="attendance-data.js?v=20260815v"></script>
-  <script src="drill-data.js?v=20260815v"></script>
+  <script src="chart.umd.min.js?v=20260815w"></script>
+  <script src="attendance-data.js?v=20260815w"></script>
+  <script src="drill-data.js?v=20260815w"></script>
   <style>
     :root {
       --bg: #eef8fd;
@@ -67,16 +67,20 @@
     .access-error { color: var(--red); font-size: 13px; min-height: 18px; }
 
     .filters { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
-    #attendanceView .filters { grid-template-columns: minmax(260px, 1.3fr) minmax(190px, 1fr) repeat(4, minmax(150px, 0.85fr)); gap: 10px; }
-    #attendanceView.attendance-class-mode .filters { grid-template-columns: minmax(260px, 1.35fr) repeat(4, minmax(170px, 1fr)); }
+    #attendanceView .filters { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; padding: 18px; }
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 800; }
     input, select { width: 100%; min-height: 39px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fff; font: inherit; font-weight: 650; }
     select[multiple] { height: 92px; padding: 7px 10px; }
     option { padding: 5px 6px; }
     input:focus, select:focus { outline: 3px solid rgba(0, 127, 199, 0.22); border-color: var(--blue); }
 
-    .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
-    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-height: 112px; box-shadow: var(--shadow); }
+    .regional-filter-panel { display: inline-flex; gap: 8px; margin: 8px 0 2px; padding: 6px; border: 1px solid rgba(0, 128, 157, 0.2); border-radius: 8px; background: linear-gradient(135deg, #ffffff 0%, #f4fcff 100%); box-shadow: var(--shadow); }
+    .regional-card { min-height: 38px; padding: 0 18px; border: 0; border-radius: 7px; background: #eef8fd; color: #52657a; text-align: center; cursor: pointer; }
+    .regional-card strong { display: block; font-size: 14px; line-height: 38px; white-space: nowrap; }
+    .regional-card:hover { background: #e2f7f6; color: var(--blue); }
+    .regional-card.active { background: linear-gradient(135deg, var(--blue), var(--green)); color: #ffffff; box-shadow: 0 8px 18px rgba(0, 128, 157, 0.18); }
+    .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 4px 0 12px; }
+    .stat { background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-height: 112px; box-shadow: var(--shadow); }
     .stat .label { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
     .stat .value { margin-top: 8px; font-size: 30px; font-weight: 850; line-height: 1.05; }
     .stat .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
@@ -99,7 +103,6 @@
     .panel-head .table-tools input { min-width: 230px; }
     .panel-head .table-tools select, .chart-controls select { min-width: 210px; }
     .chartbox { height: 360px; padding: 18px 22px 12px; }
-    .attendance-class-mode .chartbox { height: 430px; padding: 22px 30px 14px; }
     .chart-controls { display: flex; gap: 8px; align-items: center; }
     .chart-controls select { height: 34px; min-height: 34px; min-width: 118px; }
     .table-wrap { overflow: auto; max-height: 560px; }
@@ -107,9 +110,23 @@
     th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
     th:nth-child(n+5), td:nth-child(n+5) { text-align: center; }
     th { position: sticky; top: 0; background: #f0f8fc; color: var(--muted); z-index: 2; font-size: 13px; font-weight: 950; }
+    .branch-summary-table th { text-align: center; }
+    .branch-summary-table td:not(.name) { text-align: center; }
     td.name { min-width: 250px; white-space: normal; font-weight: 400; }
     .name-toggle { all: unset; cursor: pointer; color: inherit; font: inherit; }
     .name-toggle:hover { color: var(--blue-dark); text-decoration: underline; }
+    .edit-attendance-btn { height: 28px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--blue-dark); background: #fff; font-size: 12px; font-weight: 900; cursor: pointer; }
+    .edit-attendance-btn:hover { border-color: var(--blue); background: #f7fdff; }
+    .edit-attendance-row td { padding: 0; background: #f8fbfd; }
+    .edit-attendance-panel { display: grid; gap: 12px; margin: 12px 16px 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .edit-attendance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .edit-attendance-grid label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 850; }
+    .edit-attendance-grid input, .edit-attendance-grid select { height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px; color: var(--ink); background: #fff; }
+    .edit-attendance-grid input:disabled { color: var(--muted); background: #edf6fb; }
+    .edit-attendance-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .edit-attendance-note { color: var(--muted); font-size: 12px; }
+    .edit-attendance-save { background: var(--blue); color: #fff; }
+    .edit-attendance-cancel { background: #eef8fd; color: var(--ink); }
     .inline-absence-row td { padding: 0; background: #f8fbfd; }
     .inline-absence-list { display: grid; gap: 8px; margin: 12px 16px 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
     .inline-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
@@ -280,18 +297,18 @@
 
   <main class="wrap">
     <section class="view" id="attendanceView">
-    <div class="sub-tabs" aria-label="Mode kehadiran siswa">
-      <button class="sub-tab active" data-attendance-mode="student">Siswa</button>
-      <button class="sub-tab" data-attendance-mode="class">Kelas</button>
-    </div>
     <section class="filters attendance-filters" aria-label="Filter dashboard">
-      <label id="attendanceStudentFilter">Cari siswa<input id="searchInput" type="search" list="studentSuggestions" placeholder="Nama siswa"><datalist id="studentSuggestions"></datalist></label>
-      <label id="attendancePaidDateFilter">Tanggal daftar<input id="attendancePaidDateInput" type="text" placeholder="Otomatis" readonly></label>
-      <label id="attendanceClassFilter">Kelas<select id="classSelect"></select></label>
+      <label id="attendanceClassFilter">Filter kelas<select id="classSelect"></select></label>
+      <label id="attendanceStudentFilter">Filter siswa<input id="searchInput" type="search" list="studentSuggestions" placeholder="Pilih kelas dulu" autocomplete="off" disabled><datalist id="studentSuggestions"></datalist></label>
       <label>Bulan<select id="monthSelect"></select></label>
-      <label>Week<select id="weekSelect"></select></label>
-      <label>Status<select id="statusSelect"><option value="">Semua status</option><option value="Hadir">Hadir</option><option value="Izin">Izin</option><option value="Sakit">Sakit</option><option value="Alpa">Alpa</option></select></label>
-      <label>Periode<select id="periodSelect"><option value="">Semua bulan/week</option></select></label>
+      <label id="weekFilterLabel" hidden>Week<select id="weekSelect"></select></label>
+    </section>
+
+    <section class="regional-filter-panel" id="regionalFilterPanel" aria-label="Filter regional">
+      <button class="regional-card active" type="button" data-regional-value=""><strong>Sulsel Raya</strong></button>
+      <button class="regional-card" type="button" data-regional-value="Makassar Raya"><strong>Makassar Raya</strong></button>
+      <button class="regional-card" type="button" data-regional-value="Sulawesi Selatan"><strong>Sulawesi Selatan</strong></button>
+      <input id="regionalSelect" type="hidden" value="">
     </section>
 
     <section class="stats" aria-label="Ringkasan">
@@ -446,20 +463,26 @@
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
     const APPS_SCRIPT_URL = "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 8;
+    const LIVE_DATA_SCHEMA_VERSION = 9;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
     const LIVE_DRILL_SCHEMA_VERSION = 5;
-    const DASHBOARD_MIN_TODAY = localIsoDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
     const USE_NETLIFY_PROXY = location.hostname.includes("netlify");
     let appsScriptDataPromise = null;
     let data = normalizeData(window.ATTENDANCE_DATA || { students: [], weeks: [], studentWeeks: [], records: [] });
-    let drillData = Array.isArray(window.DRILL_DATA) ? window.DRILL_DATA : [];
-    let drillLoaded = Array.isArray(window.DRILL_DATA);
+    let drillData = [];
+    const drillFallbackData = Array.isArray(window.DRILL_DATA) ? window.DRILL_DATA : [];
+    let drillLoaded = false;
     let selectedDrillDate = "";
     let currentDrillDates = [];
+    let drillRenderSignature = "";
+    let drillRenderTimer = 0;
+    let drillLoadedScope = "";
+    let drillLoadPromise = null;
     let attendanceMode = "student";
     let expandedAttendanceStudent = "";
     let expandedAttendanceClass = "";
+    let editingAttendanceKey = "";
     let drillMode = "student";
     let selectedDrillGrade = "12 SMA";
     let byId = new Map();
@@ -483,12 +506,39 @@
           if (!meta || meta.hidden) return;
           meta.data.forEach((bar, index) => {
             const value = datasetValues[index];
-            if (value == null) return;
+            if (value == null || value <= 0) return;
             ctx.fillStyle = datasetIndex === 0 ? "#b45309" : "#047857";
-            ctx.font = "850 10px Inter, sans-serif";
-            const lift = datasetIndex === 0 ? 9 : 7;
-            const y = Math.max(chart.chartArea.top + 10, bar.y - lift);
-            ctx.fillText(numberFmt.format(value), bar.x, y);
+            ctx.font = "850 11px Inter, sans-serif";
+            const y = Math.max(chart.chartArea.top + 14, bar.y - 12);
+            const offset = datasetIndex === 0 ? -5 : 5;
+            ctx.fillText(numberFmt.format(value), bar.x + offset, y);
+          });
+        });
+        ctx.restore();
+      }
+    };
+    const branchBarValueLabelPlugin = {
+      id: "branchBarValueLabelPlugin",
+      afterDatasetsDraw(chart) {
+        const values = chart.options.plugins?.branchBarValueLabelPlugin?.values || [];
+        if (!values.length) return;
+        const { ctx } = chart;
+        ctx.save();
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        values.forEach((datasetValues, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (!meta || meta.hidden) return;
+          meta.data.forEach((bar, index) => {
+            const value = datasetValues[index];
+            if (value == null) return;
+            const label = numberFmt.format(value);
+            const fontSize = Math.max(9, Math.min(12, (bar.height || 12) * 0.82));
+            ctx.font = `850 ${fontSize}px Inter, sans-serif`;
+            ctx.fillStyle = datasetIndex === 0 ? "#b45309" : "#047857";
+            const textWidth = ctx.measureText(label).width;
+            const x = Math.min(bar.x + 8, chart.chartArea.right - textWidth - 4);
+            ctx.fillText(label, x, bar.y + 0.5);
           });
         });
         ctx.restore();
@@ -518,7 +568,7 @@
     let lockedBranch = "";
 
     const $ = (id) => document.getElementById(id);
-    const inputIds = ["branchSelect", "searchInput", "classSelect", "monthSelect", "weekSelect", "statusSelect", "periodSelect", "tableClassSelect", "tableSearch", "sortSelect"];
+    const inputIds = ["branchSelect", "searchInput", "classSelect", "monthSelect", "weekSelect", "regionalSelect", "tableClassSelect", "tableSearch", "sortSelect"];
 
     function localIsoDate(date = new Date()) {
       const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
@@ -540,16 +590,18 @@
       $("downloadPdfBtn").addEventListener("click", downloadStudentPdf);
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
       $("refreshBtn").addEventListener("click", refreshData);
-      document.querySelectorAll("[data-attendance-mode]").forEach((tab) => tab.addEventListener("click", () => setAttendanceMode(tab.dataset.attendanceMode)));
+      $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
+      $("studentRows").addEventListener("submit", handleAttendanceEditSubmit);
+      document.querySelectorAll(".regional-card").forEach((card) => card.addEventListener("click", () => setRegionalFilter(card.dataset.regionalValue || "")));
       ["drillStudentInput", "drillClassSelect", "drillMonthSelect", "drillWeekSelect"].forEach((id) => {
-        $(id).addEventListener("input", renderDrill);
-        $(id).addEventListener("change", renderDrill);
+        $(id).addEventListener("input", scheduleDrillRender);
+        $(id).addEventListener("change", scheduleDrillRender);
       });
       $("drillGradeTabs").addEventListener("click", (event) => {
         const tab = event.target.closest("[data-drill-grade]");
         if (!tab) return;
         selectedDrillGrade = tab.dataset.drillGrade;
-        renderDrill();
+        scheduleDrillRender();
       });
       document.querySelectorAll("[data-drill-mode]").forEach((tab) => tab.addEventListener("click", () => setDrillMode(tab.dataset.drillMode)));
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
@@ -558,17 +610,10 @@
     }
 
     function setAttendanceMode(mode) {
-      attendanceMode = mode === "class" ? "class" : "student";
-      $("attendanceView").classList.toggle("attendance-class-mode", attendanceMode === "class");
-      document.querySelectorAll("[data-attendance-mode]").forEach((tab) => tab.classList.toggle("active", tab.dataset.attendanceMode === attendanceMode));
-      $("attendanceStudentFilter").hidden = attendanceMode !== "student";
-      $("attendancePaidDateFilter").hidden = attendanceMode !== "student";
-      $("attendanceClassFilter").hidden = attendanceMode !== "class";
-      if (attendanceMode === "student") $("classSelect").value = "";
-      if (attendanceMode === "class") {
-        $("searchInput").value = "";
-        $("attendancePaidDateInput").value = "";
-      }
+      attendanceMode = "student";
+      $("attendanceStudentFilter").hidden = false;
+      $("attendanceClassFilter").hidden = false;
+      updateClassOptions();
       render();
     }
 
@@ -581,7 +626,7 @@
       if (drillMode === "student") $("drillClassSelect").value = "";
       if (drillMode === "class") $("drillStudentInput").value = "";
       selectedDrillDate = "";
-      renderDrill();
+      scheduleDrillRender();
     }
 
     function showView(viewId) {
@@ -591,11 +636,7 @@
       document.querySelectorAll(".nav-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.view === viewId);
       });
-      if (viewId === "drillView") {
-        fillDrillFilters();
-        renderDrill();
-        if (!drillLoaded) loadDrillData();
-      }
+      if (viewId === "drillView") loadDrillData();
     }
 
 
@@ -688,26 +729,46 @@
       if (lockedBranch) $("branchSelect").value = lockedBranch;
       updateClassOptions();
       $("monthSelect").innerHTML = `<option value="">Semua bulan</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
-      $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weekNames.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
-      $("periodSelect").innerHTML = `<option value="">Semua bulan/week</option>` + data.weeks.map((period) => `<option value="${escapeHtml(period.key)}">${escapeHtml(period.label)}</option>`).join("");
+      updateWeekOptions();
       updateStudentSuggestions();
     }
 
     function handleFilterInput(event) {
-      if (event.target.id === "periodSelect" && event.target.value) {
-        $("monthSelect").value = "";
-        $("weekSelect").value = "";
-      }
-      if ((event.target.id === "monthSelect" || event.target.id === "weekSelect") && event.target.value) {
-        $("periodSelect").value = "";
-      }
+      if (event.target.id === "monthSelect") updateWeekOptions();
       if (event.target.id === "branchSelect") {
         updateClassOptions();
         fillDrillFilters();
         updateStudentSuggestions();
         updateDrillStudentOptions();
+        loadDrillData(true);
+      }
+      if (event.target.id === "classSelect") {
+        $("tableClassSelect").value = event.target.value;
+        updateStudentSuggestions();
+      }
+      if (event.target.id === "tableClassSelect") {
+        $("classSelect").value = event.target.value;
+        updateStudentSuggestions();
       }
       updateAttendancePaidDate();
+      render();
+    }
+
+    function updateWeekOptions() {
+      const selectedMonth = $("monthSelect").value;
+      const weeks = selectedMonth
+        ? [...new Set(data.weeks.filter((week) => week.month === selectedMonth).map((week) => week.week).filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b))
+        : [];
+      $("weekFilterLabel").hidden = !selectedMonth;
+      $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weeks.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
+      if (!selectedMonth || !weeks.includes($("weekSelect").value)) $("weekSelect").value = "";
+    }
+
+    function setRegionalFilter(value) {
+      $("regionalSelect").value = value;
+      document.querySelectorAll(".regional-card").forEach((card) => {
+        card.classList.toggle("active", (card.dataset.regionalValue || "") === value);
+      });
       render();
     }
 
@@ -721,20 +782,34 @@
 
     function updateClassOptions() {
       const selectedBranch = $("branchSelect").value;
-      const branchClasses = classesForBranch(selectedBranch);
-      const options = `<option value="">Semua kelas</option>` + branchClasses.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
+      const branchClasses = selectedBranch ? classesForBranch(selectedBranch) : [];
+      const optionItems = branchClasses;
+      const options = `<option value="">${selectedBranch ? "Semua kelas" : "Pilih cabang dulu"}</option>` + optionItems.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
       ["classSelect", "tableClassSelect"].forEach((id) => {
         const select = $(id);
         const current = select.value;
         select.innerHTML = options;
-        select.value = branchClasses.includes(current) ? current : "";
+        select.value = optionItems.includes(current) ? current : "";
       });
+      $("tableClassSelect").hidden = false;
+      $("tableSearch").hidden = false;
     }
 
     function updateStudentSuggestions() {
       const selectedBranch = $("branchSelect").value;
+      const selectedClass = $("classSelect").value || $("tableClassSelect").value;
+      if (!selectedClass) {
+        $("searchInput").value = "";
+        $("searchInput").disabled = true;
+        $("searchInput").placeholder = "Pilih kelas dulu";
+        $("studentSuggestions").innerHTML = "";
+        return;
+      }
+      $("searchInput").disabled = false;
+      $("searchInput").placeholder = "Nama siswa";
       const students = data.students
         .filter((student) => !selectedBranch || student.branch === selectedBranch)
+        .filter((student) => !selectedClass || student.class === selectedClass)
         .map((student) => student.name)
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "id"));
@@ -744,7 +819,6 @@
     function updateAttendancePaidDate() {
       const selectedStudent = $("searchInput").value.trim().toLowerCase();
       const student = findAttendanceStudent(selectedStudent);
-      $("attendancePaidDateInput").value = formatPaidDate(student?.paidDate);
     }
 
     function findAttendanceStudent(selectedStudent) {
@@ -764,11 +838,12 @@
       return {
         search: $("searchInput").value.trim().toLowerCase(),
         branch: $("branchSelect").value,
+        regional: $("regionalSelect").value,
         kelas: $("classSelect").value || $("tableClassSelect").value,
         month: $("monthSelect").value,
         week: $("weekSelect").value,
-        status: $("statusSelect").value,
-        period: $("periodSelect").value,
+        status: "",
+        period: "",
         tableSearch: $("tableSearch").value.trim().toLowerCase(),
         sort: $("sortSelect").value
       };
@@ -779,13 +854,29 @@
       if (!student) return false;
       const start = itemWeekStart(item);
       if (start && start > DASHBOARD_MIN_TODAY) return false;
+      const studentStart = attendanceStartDate(student);
+      if (studentStart) {
+        const end = item.weekEnd || item.date || start;
+        if (end && end < studentStart) return false;
+        if (item.date && item.date < studentStart) return false;
+      }
       if (filters.search && !`${student.name} ${student.email}`.toLowerCase().includes(filters.search)) return false;
       if (filters.branch && student.branch !== filters.branch) return false;
+      if (!filters.branch && filters.regional && branchRegion(student.branch) !== filters.regional) return false;
       if (filters.kelas && student.class !== filters.kelas) return false;
       if (filters.period && item.weekKey !== filters.period) return false;
       if (filters.month && item.month !== filters.month) return false;
       if (filters.week && item.week !== filters.week) return false;
       return true;
+    }
+
+    function attendanceStartDate(student) {
+      const minimumStart = "2026-07-13";
+      const paidDate = parseIndonesianDate(student?.paidDate);
+      if (!paidDate || paidDate < minimumStart) return minimumStart;
+      const nextDate = new Date(`${paidDate}T00:00:00`);
+      nextDate.setDate(nextDate.getDate() + 1);
+      return isoLocalDate(nextDate);
     }
 
     function itemWeekStart(item) {
@@ -797,7 +888,7 @@
     }
 
     function filteredRecords(filters) {
-      return data.records.filter((record) => weekMatches(record, filters) && (!filters.status || record.status === filters.status));
+      return data.records.filter((record) => weekMatches(record, filters));
     }
 
     function filteredWeekRows(filters, applyMode = true) {
@@ -823,17 +914,8 @@
         attendanceRate: row.idealSessions ? row.present / row.idealSessions : (row.total ? row.present / row.total : 0),
         monthWeek: `${String(row.periodOrder ?? 999).padStart(3, "0")}-${row.student}`
       }));
-      if (filters.status) {
-        rows = rows.filter((row) => {
-          if (filters.status === "Hadir") return row.present > 0;
-          if (filters.status === "Izin") return row.permit > 0;
-          if (filters.status === "Sakit") return row.sick > 0;
-          if (filters.status === "Alpa") return row.absent > 0;
-          return row.total > 0;
-        });
-      }
-      if (applyMode && attendanceMode === "class") rows = filters.kelas ? summarizeAttendanceRowsByClassWeek(rows) : summarizeAttendanceRowsByClass(rows);
-      if (applyMode && attendanceMode === "student" && !filters.search) rows = summarizeAttendanceRowsByStudent(rows);
+      if (applyMode && attendanceMode === "student" && !filters.branch && !filters.kelas && !filters.search) rows = summarizeAttendanceRowsByBranch(rows);
+      else if (applyMode && attendanceMode === "student" && !filters.search) rows = summarizeAttendanceRowsByStudent(rows);
       if (filters.tableSearch) {
         rows = rows.filter((row) => `${row.student} ${row.class} ${row.month || ""} ${row.week || ""}`.toLowerCase().includes(filters.tableSearch));
       }
@@ -894,6 +976,63 @@
       })).filter((row) => row.class && row.class !== "-").sort((a, b) => compareClass(a.class, b.class));
     }
 
+    function summarizeAttendanceRowsByBranch(rows) {
+      const grouped = new Map();
+      const filters = currentFilters();
+      rows.forEach((row) => {
+        const key = row.branch || byId.get(row.studentId)?.branch || "-";
+        if (!grouped.has(key)) {
+          grouped.set(key, { aggregateBranch: true, class: key, branch: key, idealSessions: 0, present: 0, permit: 0, sick: 0, absent: 0, students: new Set(), classes: new Set() });
+        }
+        const item = grouped.get(key);
+        item.students.add(row.studentId || row.student);
+        item.idealSessions += row.idealSessions || 0;
+        item.present += row.present || 0;
+        item.permit += row.permit || 0;
+        item.sick += row.sick || 0;
+        item.absent += row.absent || 0;
+      });
+      return [...grouped.values()].map((row) => {
+        const classCount = activeRombelCount(row.branch, filters);
+        return {
+          ...row,
+          studentCount: row.students.size,
+          classCount,
+          efficiency: classCount ? row.students.size / classCount : 0,
+          attendanceRate: row.idealSessions ? row.present / row.idealSessions : 0,
+          monthWeek: row.branch
+        };
+      }).filter((row) => row.branch && row.branch !== "-").sort((a, b) => a.branch.localeCompare(b.branch, "id"));
+    }
+
+    function activeRombelCount(branch, filters) {
+      const periodEnd = selectedAttendancePeriodEnd(filters);
+      const rombels = new Map();
+      data.students.forEach((student) => {
+        if (!student.class || !student.branch) return;
+        if (branch && student.branch !== branch) return;
+        if (!filters.branch && filters.regional && branchRegion(student.branch) !== filters.regional) return;
+        const startDate = attendanceStartDate(student);
+        const key = `${student.branch}|${student.class}`;
+        const current = rombels.get(key);
+        if (!current || startDate < current) rombels.set(key, startDate);
+      });
+      return [...rombels.values()].filter((startDate) => !periodEnd || startDate <= periodEnd).length;
+    }
+
+    function selectedAttendancePeriodEnd(filters) {
+      const weeks = data.weeks.filter((week) => {
+        if (filters.month && week.month !== filters.month) return false;
+        if (filters.week && week.week !== filters.week) return false;
+        return true;
+      });
+      if (!weeks.length || (!filters.month && !filters.week)) return DASHBOARD_MIN_TODAY;
+      return weeks.reduce((latest, week) => {
+        const end = week.end || week.start || "";
+        return end > latest ? end : latest;
+      }, "");
+    }
+
     function summarizeAttendanceRowsByClassWeek(rows) {
       return summarizeByClass(rows)
         .filter((row) => row.class && row.class !== "-")
@@ -903,15 +1042,16 @@
 
     function render() {
       const filters = currentFilters();
-      $("attendanceTableTitle").textContent = attendanceMode === "class" ? "Rekap per Kelas" : "Rekap Per Siswa, Bulan, Week";
+      $("attendanceTableTitle").textContent = !filters.branch && !filters.kelas && !filters.search ? "Rekap Semua Cabang" : "Rekap Per Siswa, Bulan, Week";
       const records = filteredRecords(filters);
       const rows = filteredWeekRows(filters);
       const totals = countStatusesFromRows(rows);
       const idealTotal = rows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
       const presentRate = idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0;
-      $("primaryCountLabel").textContent = attendanceMode === "class" ? "Kelas" : "Siswa";
-      const primaryCount = attendanceMode === "class"
-        ? (filters.kelas ? 1 : rows.filter((row) => row.class && row.class !== "-").length)
+      const isBranchSummary = !filters.branch && !filters.kelas && !filters.search;
+      $("primaryCountLabel").textContent = isBranchSummary ? "Cabang" : "Siswa";
+      const primaryCount = isBranchSummary
+        ? rows.filter((row) => row.aggregateBranch && row.branch && row.branch !== "-").length
         : new Set(rows.map((row) => row.studentId)).size;
       $("studentCount").textContent = numberFmt.format(primaryCount);
       updateStudentCountHint(primaryCount, filters);
@@ -929,6 +1069,10 @@
 
     function updateStudentCountHint(primaryCount, filters) {
       const hint = $("studentCountHint");
+      if (!filters.branch && !filters.kelas && !filters.search) {
+        hint.textContent = "jumlah cabang";
+        return;
+      }
       if (attendanceMode !== "student") {
         hint.textContent = "sesuai filter";
         return;
@@ -975,10 +1119,17 @@
     function renderTable(rows) {
       const filters = currentFilters();
       $("emptyState").hidden = rows.length > 0;
+      const isBranchAggregate = rows.some((row) => row.aggregateBranch);
       const isClassAggregate = rows.some((row) => row.aggregateClass);
       const isClassWeekAggregate = rows.some((row) => row.aggregateClassWeek);
       const isAggregate = rows.some((row) => row.aggregate);
-      const colSpan = isClassAggregate || isAggregate ? 8 : 10;
+      const canEditRows = attendanceMode === "student" && !isBranchAggregate && !isClassAggregate && !isAggregate && !isClassWeekAggregate;
+      const colSpan = isBranchAggregate ? 10 : isClassAggregate || isAggregate ? 8 : canEditRows ? 11 : 10;
+      $("studentRows").closest("table")?.classList.toggle("branch-summary-table", isBranchAggregate);
+      $("regionalFilterPanel").hidden = !isBranchAggregate;
+      $("tableClassSelect").hidden = isBranchAggregate;
+      $("tableSearch").hidden = isBranchAggregate;
+      $("sortSelect").hidden = isBranchAggregate;
       $("studentRowsHead").innerHTML = isClassWeekAggregate ? `<tr>
               <th>Kelas</th>
               <th>Bulan</th>
@@ -990,6 +1141,17 @@
               <th>Sakit</th>
               <th>Alpa</th>
               <th>% Hadir</th>
+            </tr>` : isBranchAggregate ? `<tr>
+              <th>Nama Cabang</th>
+              <th>#Rombel</th>
+              <th>#Siswa</th>
+              <th>Sesi Ideal</th>
+              <th>Hadir</th>
+              <th>Izin</th>
+              <th>Sakit</th>
+              <th>Alpa</th>
+              <th>% Hadir</th>
+              <th>Siswa/Rombel</th>
             </tr>` : isClassAggregate ? `<tr>
               <th>Kelas</th>
               <th>Siswa</th>
@@ -1019,6 +1181,7 @@
               <th>Sakit</th>
               <th>Alpa</th>
               <th>% Hadir</th>
+              ${canEditRows ? "<th>Edit</th>" : ""}
             </tr>`;
       $("studentRows").innerHTML = rows.map((row) => {
         const cls = row.attendanceRate >= 0.8 ? "good" : row.attendanceRate >= 0.6 ? "warn" : "bad";
@@ -1029,9 +1192,10 @@
           : "";
         const classKey = `${String(row.class || "").toLowerCase()}|${row.weekKey || ""}`;
         const classButton = `<button class="name-toggle" onclick="toggleClassBottomStudents('${encodeURIComponent(row.class || "")}', '${encodeURIComponent(row.weekKey || "")}')">${escapeHtml(row.class || "")}</button>`;
-        const inlineClassBottom = !filters.kelas && (isClassAggregate || isClassWeekAggregate) && expandedAttendanceClass === classKey
+        const inlineClassBottom = !filters.kelas && !isBranchAggregate && (isClassAggregate || isClassWeekAggregate) && expandedAttendanceClass === classKey
           ? renderClassBottomStudents(row.class, colSpan)
           : "";
+        const editPanel = canEditRows && editingAttendanceKey === attendanceRowKey(row) ? renderAttendanceEditPanel(row, colSpan) : "";
         return isClassWeekAggregate ? `<tr>
           <td class="name">${classButton}</td>
           <td>${escapeHtml(row.month)}</td>
@@ -1043,7 +1207,18 @@
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
           <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
-        </tr>${inlineClassBottom}` : isClassAggregate ? `<tr>
+        </tr>${inlineClassBottom}` : isBranchAggregate ? `<tr>
+          <td class="name">${escapeHtml(row.branch || row.class)}</td>
+          <td>${numberFmt.format(row.classCount || 0)}</td>
+          <td>${numberFmt.format(row.studentCount || 0)}</td>
+          <td class="ideal">${numberFmt.format(row.idealSessions || 0)}</td>
+          <td class="good">${numberFmt.format(row.present)}</td>
+          <td class="permit">${numberFmt.format(row.permit)}</td>
+          <td class="violet">${numberFmt.format(row.sick)}</td>
+          <td class="bad">${numberFmt.format(row.absent)}</td>
+          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td class="blue">${numberFmt.format(Math.round(row.efficiency || 0))}</td>
+        </tr>` : isClassAggregate ? `<tr>
           <td class="name">${classButton}</td>
           <td>${numberFmt.format(row.studentCount || 0)}</td>
           <td class="ideal">${numberFmt.format(row.idealSessions || 0)}</td>
@@ -1072,7 +1247,8 @@
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
           <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
-        </tr>${inlineAbsences}`;
+          ${canEditRows ? `<td>${renderAttendanceEditButton(row)}</td>` : ""}
+        </tr>${inlineAbsences}${editPanel}`;
       }).join("") + (filters.kelas && isClassWeekAggregate ? renderClassBottomStudents(filters.kelas, colSpan) : "");
     }
 
@@ -1089,6 +1265,93 @@
       const weekKey = decodeURIComponent(encodedWeekKey || "");
       const key = `${kelas}|${weekKey}`;
       expandedAttendanceClass = expandedAttendanceClass === key ? "" : key;
+      render();
+    }
+
+    function attendanceRowKey(row) {
+      return `${row.studentId || ""}|${row.weekKey || ""}`;
+    }
+
+    function attendanceEditDates(row) {
+      return data.records
+        .filter((record) => record.studentId === row.studentId && record.weekKey === row.weekKey)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function findAttendanceRecord(studentId, weekKey, date) {
+      return data.records.find((record) => record.studentId === studentId && record.weekKey === weekKey && record.date === date);
+    }
+
+    function renderAttendanceEditButton(row) {
+      const key = attendanceRowKey(row);
+      const label = editingAttendanceKey === key ? "Tutup" : "Edit";
+      return `<button class="edit-attendance-btn" type="button" onclick="toggleAttendanceEdit('${encodeURIComponent(key)}')">${label}</button>`;
+    }
+
+    function renderAttendanceEditPanel(row, colSpan) {
+      const dates = attendanceEditDates(row);
+      const options = ["Hadir", "Izin", "Sakit", "Alpa"];
+      return `<tr class="edit-attendance-row"><td colspan="${colSpan}">
+        <form class="edit-attendance-panel" data-student-id="${row.studentId}" data-week-key="${escapeHtml(row.weekKey || "")}">
+          <div class="inline-panel-title"><span>Edit Kehadiran</span><span class="pill">${escapeHtml(row.student || "")} - ${escapeHtml(row.month || "")} ${escapeHtml(row.week || "")}</span></div>
+          <div class="edit-attendance-grid">
+            ${dates.map((record) => `
+              <label>${formatLongDate(record.date)}
+                <select name="status:${escapeHtml(record.date)}" data-date="${escapeHtml(record.date)}" data-sessions="${record.sessions || 1}">
+                  ${options.map((status) => `<option value="${status}" ${record.status === status ? "selected" : ""}>${status}</option>`).join("")}
+                </select>
+                <input name="sessions:${escapeHtml(record.date)}" type="number" min="0" max="12" step="1" value="${record.status === "Hadir" ? (record.sessions || 1) : 0}" ${record.status === "Hadir" ? "" : "disabled"} aria-label="Jumlah sesi ${escapeHtml(record.date)}">
+              </label>
+            `).join("")}
+          </div>
+          <div class="edit-attendance-actions">
+            <span class="edit-attendance-note">Perubahan tersimpan di browser ini.</span>
+            <button class="edit-attendance-cancel" type="button" onclick="toggleAttendanceEdit('${encodeURIComponent(attendanceRowKey(row))}')">Batal</button>
+            <button class="edit-attendance-save" type="submit">Simpan</button>
+          </div>
+        </form>
+      </td></tr>`;
+    }
+
+    function toggleAttendanceEdit(encodedKey) {
+      const key = decodeURIComponent(encodedKey || "");
+      editingAttendanceKey = editingAttendanceKey === key ? "" : key;
+      expandedAttendanceStudent = "";
+      render();
+    }
+
+    function handleAttendanceEditStatusChange(event) {
+      const select = event.target.closest(".edit-attendance-panel select");
+      if (!select) return;
+      const input = select.closest("label")?.querySelector("input[type='number']");
+      if (!input) return;
+      input.disabled = select.value !== "Hadir";
+      if (select.value !== "Hadir") input.value = 0;
+      else if (!Number(input.value)) input.value = select.dataset.sessions || 1;
+    }
+
+    function handleAttendanceEditSubmit(event) {
+      const form = event.target.closest(".edit-attendance-panel");
+      if (!form) return;
+      event.preventDefault();
+      const saveButton = form.querySelector(".edit-attendance-save");
+      if (saveButton) saveButton.textContent = "Tersimpan";
+      const studentId = Number(form.dataset.studentId);
+      const weekKey = form.dataset.weekKey || "";
+      form.querySelectorAll("select[data-date]").forEach((select) => {
+        const date = select.dataset.date;
+        const record = findAttendanceRecord(studentId, weekKey, date);
+        if (!record) return;
+        const sessionInput = select.closest("label")?.querySelector("input[type='number']");
+        const sessions = Math.max(0, Number(sessionInput?.value || 0));
+        record.status = select.value;
+        record.raw = select.value === "Hadir" ? String(sessions || 1) : select.value;
+        record.sessions = select.value === "Hadir" ? (sessions || 1) : 0;
+      });
+      const savedAt = new Date();
+      saveLiveData(data, savedAt);
+      updateLiveScriptStatus(savedAt, "Edit lokal");
+      editingAttendanceKey = "";
       render();
     }
 
@@ -1214,10 +1477,23 @@
     }
 
     function renderCharts(records, rows) {
-      if (attendanceMode === "class") {
-        renderClassBarChart(rows);
+      const filters = currentFilters();
+      if (!filters.branch && !filters.kelas && !filters.search) {
+        renderBranchBarChart(filteredWeekRows(filters, false));
         return;
       }
+      if (filters.branch && !filters.kelas && !filters.search) {
+        renderClassBarChart(filteredWeekRows(filters, false));
+        return;
+      }
+      if (filters.kelas && !filters.search) {
+        renderWeeklyComparisonChart(filteredWeekRows(filters, false), `Perbandingan Sesi Ideal dan Hadir ${filters.kelas} Per Week`);
+        return;
+      }
+      renderWeeklyComparisonChart(rows, "Perbandingan Sesi Ideal dan Hadir");
+    }
+
+    function renderWeeklyComparisonChart(rows, title) {
       const weekly = new Map();
       rows.forEach((row) => {
         const key = row.weekKey || `${row.month || ""}|${row.week || ""}|${row.student || row.class || ""}`;
@@ -1227,33 +1503,107 @@
         item.ideal += row.idealSessions || 0;
         item.present += row.present || 0;
       });
-      const weeklyRows = [...weekly.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "id"));
+      const weeklyRows = [...weekly.values()]
+        .filter((item) => item.ideal > 0 || item.present > 0)
+        .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "id"));
       const labels = weeklyRows.map((item) => item.label);
       const idealData = weeklyRows.map((item) => item.ideal);
       const presentData = weeklyRows.map((item) => item.present);
-      $("trendTitle").textContent = "Perbandingan Sesi Ideal dan Hadir";
+      const maxValue = Math.max(0, ...idealData, ...presentData);
+      const yMax = maxValue ? Math.ceil((maxValue + Math.max(4, maxValue * 0.12)) / 5) * 5 : undefined;
+      const canvas = $("trendChart");
+      const chartBox = canvas.parentElement;
+      const presentGradient = (context) => {
+        const chart = context.chart;
+        const area = chart.chartArea;
+        if (!area) return "#10B981";
+        const gradient = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        gradient.addColorStop(0, "#0ea5a3");
+        gradient.addColorStop(0.55, "#10B981");
+        gradient.addColorStop(1, "#34d399");
+        return gradient;
+      };
+      const idealGradient = (context) => {
+        const chart = context.chart;
+        const area = chart.chartArea;
+        if (!area) return "rgba(249, 115, 22, 0.35)";
+        const gradient = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        gradient.addColorStop(0, "rgba(249, 115, 22, 0.28)");
+        gradient.addColorStop(1, "rgba(251, 146, 60, 0.55)");
+        return gradient;
+      };
+      $("trendTitle").textContent = title;
       if (trendChart) trendChart.destroy();
-      trendChart = new Chart($("trendChart"), {
+      chartBox.style.display = "";
+      chartBox.style.justifyContent = "";
+      chartBox.style.overflowX = "hidden";
+      chartBox.style.height = "";
+      canvas.style.width = "100%";
+      canvas.style.height = "";
+      canvas.style.flex = "";
+      trendChart = new Chart(canvas, {
         type: "bar",
+        plugins: [percentLabelPlugin],
         data: {
           labels,
           datasets: [
-            { label: "Sesi Ideal", data: idealData, borderColor: "#64748B", backgroundColor: "#64748B", tension: 0.28, pointRadius: 3, fill: false },
-            { label: "Hadir", data: presentData, borderColor: "#10B981", backgroundColor: "#10B981", tension: 0.28, pointRadius: 3, fill: false }
+            {
+              label: "Sesi Ideal",
+              data: idealData,
+              borderColor: "#f97316",
+              backgroundColor: idealGradient,
+              borderRadius: { topLeft: 5, topRight: 5 },
+              borderSkipped: false,
+              barPercentage: 0.82,
+              categoryPercentage: 0.58,
+              maxBarThickness: 24
+            },
+            {
+              label: "Hadir",
+              data: presentData,
+              borderColor: "#059669",
+              backgroundColor: presentGradient,
+              borderRadius: { topLeft: 5, topRight: 5 },
+              borderSkipped: false,
+              barPercentage: 0.82,
+              categoryPercentage: 0.58,
+              maxBarThickness: 24
+            }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          plugins: { legend: { position: "bottom" } },
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          plugins: {
+            legend: {
+              display: true,
+              position: "bottom",
+              labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 16, boxHeight: 8, padding: 18, color: "#52657a", font: { size: 12, weight: "800" } }
+            },
+            tooltip: {
+              backgroundColor: "rgba(15, 31, 51, 0.92)",
+              padding: 12,
+              titleFont: { size: 13, weight: "800" },
+              bodyFont: { size: 12, weight: "700" }
+            },
+            percentLabelPlugin: { labelValues: [idealData, presentData] }
+          },
+          layout: { padding: { top: 28, right: 12, bottom: 4, left: 0 } },
+          scales: {
+            x: { grid: { display: false }, border: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, color: "#52657a", font: { size: 10, weight: "800" }, padding: 8 } },
+            y: { display: true, beginAtZero: true, suggestedMax: yMax, ticks: { precision: 0 } }
+          }
         }
       });
     }
 
     function renderClassBarChart(rows) {
       const filters = currentFilters();
+      if (!filters.branch) {
+        renderBranchBarChart(filteredWeekRows(filters, false));
+        return;
+      }
       const isSingleClassAllWeeks = Boolean(filters.kelas) && !filters.week && !filters.period;
       const chartRows = isSingleClassAllWeeks
         ? summarizeByClass(filteredWeekRows(filters, false)).filter((row) => row.class === filters.kelas)
@@ -1283,8 +1633,9 @@
         gradient.addColorStop(1, "rgba(251, 146, 60, 0.55)");
         return gradient;
       };
-      $("trendTitle").textContent = isSingleClassAllWeeks ? `Kehadiran ${filters.kelas} Per Week` : "Persentase Kehadiran Per Kelas";
+      $("trendTitle").textContent = isSingleClassAllWeeks ? `Kehadiran ${filters.kelas} Per Week` : "Perbandingan Sesi Ideal dan Hadir untuk Semua Kelas";
       if (trendChart) trendChart.destroy();
+      chartBox.style.height = "";
       if (isSingleClassAllWeeks) {
         chartBox.style.display = "flex";
         chartBox.style.justifyContent = "flex-start";
@@ -1369,62 +1720,216 @@
               }
             },
             y: {
-              display: false,
-              beginAtZero: true
+              display: true,
+              beginAtZero: true,
+              ticks: { precision: 0 }
             }
           }
         }
       });
     }
 
+    function renderBranchBarChart(rows) {
+      const grouped = new Map();
+      rows.forEach((row) => {
+        const branch = row.branch || byId.get(row.studentId)?.branch || "-";
+        if (!grouped.has(branch)) grouped.set(branch, { branch, idealSessions: 0, present: 0 });
+        const item = grouped.get(branch);
+        item.idealSessions += row.idealSessions || 0;
+        item.present += row.present || 0;
+      });
+      const chartRows = [...grouped.values()]
+        .filter((row) => row.branch && row.branch !== "-")
+        .sort((a, b) => a.branch.localeCompare(b.branch, "id"));
+      const labels = chartRows.map((row) => formatBranchAxisLabel(row.branch));
+      const idealData = chartRows.map((row) => row.idealSessions || 0);
+      const presentData = chartRows.map((row) => row.present || 0);
+      const percentData = chartRows.map((row) => row.idealSessions ? Math.round((row.present / row.idealSessions) * 100) : 0);
+      const canvas = $("trendChart");
+      const chartBox = canvas.parentElement;
+      const presentGradient = (context) => {
+        const chart = context.chart;
+        const area = chart.chartArea;
+        if (!area) return "#10B981";
+        const gradient = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        gradient.addColorStop(0, "#0ea5a3");
+        gradient.addColorStop(0.55, "#10B981");
+        gradient.addColorStop(1, "#34d399");
+        return gradient;
+      };
+      const idealGradient = (context) => {
+        const chart = context.chart;
+        const area = chart.chartArea;
+        if (!area) return "rgba(249, 115, 22, 0.35)";
+        const gradient = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        gradient.addColorStop(0, "rgba(249, 115, 22, 0.28)");
+        gradient.addColorStop(1, "rgba(251, 146, 60, 0.55)");
+        return gradient;
+      };
+      $("trendTitle").textContent = "Perbandingan Sesi Ideal dan Hadir untuk Semua Cabang";
+      if (trendChart) trendChart.destroy();
+      chartBox.style.display = "";
+      chartBox.style.justifyContent = "";
+      chartBox.style.overflowX = "hidden";
+      chartBox.style.height = "";
+      canvas.style.width = "100%";
+      canvas.style.height = "";
+      canvas.style.flex = "";
+      trendChart = new Chart(canvas, {
+        type: "bar",
+        plugins: [percentLabelPlugin],
+        data: {
+          labels,
+          datasets: [
+            { label: "Sesi Ideal", data: idealData, borderColor: "#f97316", backgroundColor: idealGradient, borderRadius: { topLeft: 5, topRight: 5 }, borderSkipped: false, barPercentage: 0.82, categoryPercentage: 0.58, maxBarThickness: 24 },
+            { label: "Hadir", data: presentData, borderColor: "#059669", backgroundColor: presentGradient, borderRadius: { topLeft: 5, topRight: 5 }, borderSkipped: false, barPercentage: 0.82, categoryPercentage: 0.58, maxBarThickness: 24 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 16, boxHeight: 8, padding: 18, color: "#52657a", font: { size: 12, weight: "800" } } },
+            tooltip: {
+              backgroundColor: "rgba(15, 31, 51, 0.92)",
+              padding: 12,
+              titleFont: { size: 13, weight: "800" },
+              bodyFont: { size: 12, weight: "700" },
+              filter: (context) => context.datasetIndex === 1,
+              callbacks: {
+                label: (context) => `Hadir = ${percentData[context.dataIndex]}%`
+              }
+            },
+            percentLabelPlugin: { labelValues: [idealData, presentData] }
+          },
+          layout: { padding: { top: 18, right: 12, bottom: 4, left: 0 } },
+          scales: {
+            x: { grid: { display: false }, border: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0, color: "#52657a", font: { size: 10, weight: "800" }, padding: 8 } },
+            y: { display: true, beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+
+    function attendancePercentColor(value) {
+      const percent = Math.max(0, Math.min(100, Number(value) || 0));
+      const from = percent < 50 ? [239, 68, 68] : [248, 250, 252];
+      const to = percent < 50 ? [248, 250, 252] : [16, 185, 129];
+      const amount = percent < 50 ? percent / 50 : (percent - 50) / 50;
+      const channel = (index) => Math.round(from[index] + (to[index] - from[index]) * amount);
+      return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
+    }
+
+    function branchRegion(branch) {
+      const value = String(branch || "");
+      return value.startsWith("Makassar - ") || value === "Gowa - Sungguminasa" ? "Makassar Raya" : "Sulawesi Selatan";
+    }
+
+    function formatBranchAxisLabel(value) {
+      return String(value || "")
+        .replace(/^Makassar - /, "")
+        .replace("Cendrawasih", "bacend")
+        .replace("Hertasning", "baher")
+        .replace("Gowa - Sungguminasa", "Gowa")
+        .replace("Bone - Ahmad Yani", "Bone")
+        .replace("Bulukumba - Jend. Sudirman", "Bulukumba")
+        .replace("Palopo - Andi Kambo", "Palopo")
+        .replace("Pangkep - Sultan Hasanuddin", "Pangkep")
+        .replace("Parepare - Mattirotasi", "Parepare")
+        .replace("Pinrang - Jend. Sudirman", "Pinrang")
+        .replace("Sidrap - Jenderal Sudirman", "Sidrap")
+        .replace("Soppeng - Lalabata", "Soppeng")
+        .replace("Tana Toraja - Makale", "Toraja")
+        .replace("Toraja Utara - Poros Bolu", "Torut")
+        .replace("Wajo - Jend. Sudirman", "Wajo");
+    }
+
     function formatClassAxisLabel(value) {
       const text = String(value || "").trim();
-      const room = text.match(/\bR\d+\.(\d+)$/);
-      const shortRoom = room ? `R${Number(room[1])}` : "";
+      const room = text.match(/\b([A-Z]+)\d*\.(\d+)$/i);
+      const shortRoom = room ? `${room[1].toUpperCase()}${Number(room[2])}` : "";
       const upper = text.toUpperCase();
       if (upper.includes("KEDINASAN")) return ["Kedinasan", shortRoom].filter(Boolean);
       if (upper.includes("SIAP SNBT")) return ["SNBT", shortRoom].filter(Boolean);
-      const grade = text.match(/\b(6|7|8|9|10|11|12)\b/);
+      const grade = text.match(/\b(1|2|3|4|5|6|7|8|9|10|11|12)\b/);
       if (grade) return `${grade[1]} ${shortRoom}`.trim();
       return shortRoom || text;
     }
 
-    async function loadDrillData(force = false) {
-      if (drillLoaded && !force) return;
+    function drillSheetNameForBranch(branch) {
+      return String(branch || "").trim().toLowerCase();
+    }
+
+    function drillScope() {
+      return $("branchSelect").value || "__all__";
+    }
+
+    async function loadDrillRowsForBranch(branch) {
+      const sheetName = drillSheetNameForBranch(branch);
+      if (!sheetName) return [];
       try {
-        const liveRows = await loadSheetRows("246622240");
+        return await loadSheetRowsByName(sheetName);
+      } catch (error) {
+        console.warn(`Raw Drill ${sheetName} gagal dimuat:`, error);
+        return [];
+      }
+    }
+
+    async function loadDrillData(force = false) {
+      const scope = drillScope();
+      if (drillLoadPromise) return drillLoadPromise;
+      if (drillLoaded && !force && drillLoadedScope === scope) {
+        scheduleDrillRender();
+        return;
+      }
+      drillLoadPromise = (async () => {
+      try {
+        const selectedBranch = $("branchSelect").value;
+        const liveRows = selectedBranch
+          ? await loadDrillRowsForBranch(selectedBranch)
+          : (await Promise.all(branches.map((branch) => loadDrillRowsForBranch(branch)))).flat();
         const liveDrillData = buildDrillData(liveRows);
         if (!liveDrillData.length) throw new Error("data drill live kosong");
         drillData = liveDrillData;
         drillLoaded = true;
+        drillLoadedScope = scope;
         selectedDrillDate = "";
         fillDrillFilters();
-        renderDrill();
+        scheduleDrillRender();
       } catch (error) {
-        if (Array.isArray(window.DRILL_DATA) && window.DRILL_DATA.length) {
-          drillData = window.DRILL_DATA;
+        if (drillFallbackData.length) {
+          const selectedBranch = $("branchSelect").value;
+          drillData = selectedBranch ? drillFallbackData.filter((row) => row.branch === selectedBranch) : drillFallbackData;
           drillLoaded = true;
+          drillLoadedScope = scope;
           selectedDrillDate = "";
           fillDrillFilters();
-          renderDrill();
+          scheduleDrillRender();
         } else {
           drillData = [];
           drillLoaded = true;
+          drillLoadedScope = scope;
           selectedDrillDate = "";
           fillDrillFilters();
-          renderDrill();
+          scheduleDrillRender();
           alert(`Data Raw Drill gagal dimuat: ${error.message || error}. Filter kelas, nama siswa, month, dan week tetap tersedia dari data presensi.`);
         }
+      } finally {
+        drillLoadPromise = null;
       }
+      })();
+      return drillLoadPromise;
     }
 
     function buildDrillData(rows) {
       const headerRowIndex = findDrillHeaderRow(rows);
       const header = (rows[headerRowIndex] || rows[0] || []).map((cell) => String(cell || "").trim().toLowerCase());
       const indexOf = (patterns) => header.findIndex((label) => patterns.some((pattern) => label.includes(pattern)));
-      const subjectIndex = (() => { const i = indexOf(["subject", "mata pelajaran", "mapel"]); return i >= 0 ? i : 10; })(); // Kolom K
-      const topicIndex = (() => { const i = indexOf(["topic", "materi"]); return i >= 0 ? i : 11; })(); // Kolom L
+      const subjectIndex = 10; // Kolom K
+      const topicIndex = 11; // Kolom L
       const nameIndex = (() => { const i = indexOf(["nama siswa", "nama", "student", "siswa"]); return i >= 0 ? i : 21; })(); // Kolom V
+      const emailIndex = (() => { const i = indexOf(["email", "e-mail"]); return i >= 0 ? i : 2; })(); // Kolom C
       const classIndex = (() => { const i = indexOf(["kelas", "class", "rombel"]); return i >= 0 ? i : 6; })(); // Kolom G
       const dateIndex = (() => { const i = indexOf(["tanggal", "date", "tgl", "waktu"]); return i >= 0 ? i : 16; })(); // Kolom Q
       const monthIndex = (() => { const i = indexOf(["month", "bulan"]); return i >= 0 ? i : 17; })(); // Kolom R
@@ -1435,11 +1940,12 @@
       const totalIndex = (() => { const i = indexOf(["total", "jumlah"]); return i >= 0 ? i : 15; })(); // Kolom P
 
       return rows.map((row) => {
-        const student = valueAt(row, nameIndex);
-        const studentRecord = studentFromName(student);
+        const rawStudent = valueAt(row, nameIndex);
+        const studentRecord = studentFromName(rawStudent) || studentFromEmail(valueAt(row, emailIndex));
+        const student = studentRecord?.name || rawStudent;
         const studentClass = studentRecord?.class || normalizeDrillClass(valueAt(row, classIndex));
         const rawDate = valueAt(row, dateIndex);
-        if (!student || !studentClass || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
+        if (isInvalidSheetValue(student) || isInvalidSheetValue(studentClass) || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
         const correct = toNumber(valueAt(row, correctIndex));
         const wrong = toNumber(valueAt(row, wrongIndex));
         const blank = toNumber(valueAt(row, blankIndex));
@@ -1469,6 +1975,11 @@
     function isHeaderLike(value) {
       const text = String(value || "").trim().toLowerCase();
       return ["nama", "nama siswa", "siswa", "kelas", "class"].includes(text);
+    }
+
+    function isInvalidSheetValue(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return !text || text === "#n/a" || text === "#ref!" || text === "#value!" || text === "#error!" || text === "n/a";
     }
 
     function findDrillHeaderRow(rows) {
@@ -1508,6 +2019,20 @@
       updateDrillStudentOptions();
     }
 
+    function drillStateSignature() {
+      return JSON.stringify({
+        mode: drillMode,
+        branch: $("branchSelect").value,
+        student: drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "",
+        class: drillMode === "student" ? "" : $("drillClassSelect").value,
+        month: $("drillMonthSelect").value,
+        week: $("drillWeekSelect").value,
+        date: selectedDrillDate,
+        grade: selectedDrillGrade,
+        rows: drillData.length
+      });
+    }
+
     function updateDrillStudentOptions() {
       const selectedBranch = $("branchSelect").value;
       const students = [...new Set([
@@ -1518,7 +2043,18 @@
       $("drillStudentSuggestions").innerHTML = students.map((student) => `<option value="${escapeHtml(student)}"></option>`).join("");
     }
 
+    function scheduleDrillRender() {
+      if (drillRenderTimer) window.clearTimeout(drillRenderTimer);
+      drillRenderTimer = window.setTimeout(() => {
+        drillRenderTimer = 0;
+        renderDrill();
+      }, 32);
+    }
+
     function renderDrill(event) {
+      if ($("drillView").hidden) return;
+      const signature = drillStateSignature();
+      if (signature === drillRenderSignature) return;
       const selectedStudent = drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "";
       const selectedStudentRecord = findSelectedDrillStudent(selectedStudent);
       const selectedClass = drillMode === "student" ? (selectedStudentRecord?.class || "") : $("drillClassSelect").value;
@@ -1540,9 +2076,6 @@
       }
       if (drillMode === "student" && selectedStudent && !dates.length) {
         dates = studentTargetDateRange(selectedStudentRecord?.name || rows[0]?.student || selectedStudent);
-      }
-      if (drillMode === "student" && !selectedStudent && isAllDrillPeriodSelected()) {
-        dates = classTargetDateRange("");
       }
       if (drillMode === "student" && selectedStudent && !isAllDrillPeriodSelected()) {
         dates = dates.filter((date) => date >= studentDrillStartDate(selectedStudentRecord?.name || selectedStudent));
@@ -1573,12 +2106,18 @@
 
     function renderDrillDetail(rows, selectedClass = "", selectedStudent = "", aggregateDates = null) {
       const dates = aggregateDates?.length ? aggregateDates : [selectedDrillDate].filter(Boolean);
+      const shouldShowStudentRows = drillMode === "class";
+      if (!shouldShowStudentRows && !selectedStudent) {
+        $("drillSummaryPanel").hidden = true;
+        $("drillDetailPanel").hidden = true;
+        $("drillRowsWrap").hidden = true;
+        return;
+      }
       const selectedRows = rows.filter((row) => dates.includes(row.date));
       const displayRows = drillMode === "class" && !selectedClass
         ? summarizeDrillRowsByClass(selectedRows, dates)
         : drillDisplayRows(selectedRows, selectedClass, dates[0] || selectedDrillDate, selectedStudent, dates);
       const isStudentDetail = Boolean(selectedStudent);
-      const shouldShowStudentRows = drillMode === "class";
       $("drillSummaryPanel").hidden = !dates.length || !displayRows.length;
       $("drillDetailPanel").hidden = !dates.length || !displayRows.length || !shouldShowStudentRows;
       if (!dates.length || !displayRows.length) return;
@@ -1601,6 +2140,7 @@
       $("drillPercent").textContent = `${target ? Math.round((correct / target) * 100) : 0}%`;
       $("drillRowsWrap").hidden = !shouldShowStudentRows;
       renderDrillRows(displayRows, selectedRows);
+      drillRenderSignature = signature;
     }
 
     function renderDrillRows(displayRows, selectedRows) {
@@ -1728,7 +2268,6 @@
         renderClassLeaderboard(filteredRows, dates);
         return;
       }
-      renderStudentGradeTabs();
       const grouped = new Map();
       filteredRows.forEach((row) => {
         const student = findSelectedDrillStudent(row.student.toLowerCase()) || { name: row.student, class: row.class };
@@ -1749,6 +2288,7 @@
         item.percentExact = item.target ? (item.correct / item.target) * 100 : 0;
         item.percent = Math.round(item.percentExact);
       });
+      renderStudentGradeTabs([...new Set([...grouped.values()].map((item) => item.grade))]);
       const leaders = [...grouped.values()]
         .filter((item) => item.grade === selectedDrillGrade)
         .sort((a, b) => b.percentExact - a.percentExact || b.correct - a.correct || a.student.localeCompare(b.student, "id"))
@@ -1756,9 +2296,12 @@
       renderRankLeaderboard(leaders, "student");
     }
 
-    function renderStudentGradeTabs() {
+    function renderStudentGradeTabs(availableGrades = []) {
       const grades = ["6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
-      if (!grades.includes(selectedDrillGrade)) selectedDrillGrade = "12 SMA";
+      const available = new Set(availableGrades);
+      if (!grades.includes(selectedDrillGrade) || (available.size && !available.has(selectedDrillGrade))) {
+        selectedDrillGrade = grades.find((grade) => available.has(grade)) || "12 SMA";
+      }
       $("drillGradeTabs").hidden = false;
       $("drillGradeTabs").innerHTML = grades.map((grade) => `<button class="grade-tab ${grade === selectedDrillGrade ? "active" : ""}" data-drill-grade="${escapeHtml(grade)}">${escapeHtml(grade)}</button>`).join("");
     }
@@ -1967,13 +2510,14 @@
 
     function drillExpectedTargetForDate(kelas, selectedStudent, selectedStudentRecord, date) {
       let students = [];
+      const selectedBranch = $("branchSelect").value;
       if (selectedStudent) {
         const student = selectedStudentRecord || findSelectedDrillStudent(selectedStudent);
         if (student) students = [student];
       } else if (kelas) {
         students = activeStudentsByClass(kelas);
       } else {
-        students = data.students.filter(isActiveStudent);
+        students = data.students.filter((student) => isActiveStudent(student) && (!selectedBranch || student.branch === selectedBranch));
       }
       return students
         .filter((student) => isStudentTargetDate(student.name, date))
@@ -2022,6 +2566,12 @@
       return data.students.find((item) => item.name.toLowerCase() === search) || null;
     }
 
+    function studentFromEmail(email) {
+      const search = String(email || "").trim().toLowerCase();
+      if (!search) return null;
+      return data.students.find((item) => String(item.email || "").trim().toLowerCase() === search) || null;
+    }
+
     function normalizeDrillClass(value) {
       return String(value || "").split(",").map((item) => item.trim()).filter(Boolean)[0] || "";
     }
@@ -2053,7 +2603,10 @@
     }
 
     function classTargetDateRange(kelas) {
-      const students = kelas ? activeStudentsByClass(kelas) : data.students.filter(isActiveStudent);
+      const selectedBranch = $("branchSelect").value;
+      const students = kelas
+        ? activeStudentsByClass(kelas)
+        : data.students.filter((student) => isActiveStudent(student) && (!selectedBranch || student.branch === selectedBranch));
       const startDates = students.map((student) => studentDrillStartDate(student.name)).filter(Boolean).sort();
       return dateRangeUntilToday(startDates[0] || "2026-07-13");
     }
@@ -2133,11 +2686,24 @@
       if (!text) return "Tanpa tanggal";
       const sheetIso = normalizeSheetIsoDate(text);
       if (sheetIso) return sheetIso;
+      const monthMap = {
+        jan: "01", januari: "01",
+        feb: "02", februari: "02",
+        mar: "03", maret: "03",
+        apr: "04", april: "04",
+        mei: "05",
+        jun: "06", juni: "06",
+        jul: "07", juli: "07",
+        agu: "08", agustus: "08",
+        sep: "09", september: "09",
+        okt: "10", oktober: "10",
+        nov: "11", november: "11",
+        des: "12", desember: "12"
+      };
+      const match = text.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+      if (match) return `${match[3]}-${monthMap[match[2].toLowerCase()] || "01"}-${String(Number(match[1])).padStart(2, "0")}`;
       const native = new Date(text);
       if (!Number.isNaN(native.getTime())) return native.toISOString().slice(0, 10);
-      const monthMap = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
-      const match = text.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
-      if (match) return `${match[3]}-${monthMap[match[2]] || "01"}-${String(Number(match[1])).padStart(2, "0")}`;
       return text;
     }
 
@@ -2157,12 +2723,13 @@
       $("classSelect").value = "";
       $("monthSelect").value = "";
       $("weekSelect").value = "";
-      $("statusSelect").value = "";
-      $("periodSelect").value = "";
+      updateWeekOptions();
+      setRegionalFilter("");
       $("tableClassSelect").value = "";
       $("branchSelect").value = lockedBranch || "";
       $("tableSearch").value = "";
       $("sortSelect").value = "monthWeek:asc";
+      editingAttendanceKey = "";
       render();
     }
 
@@ -2182,7 +2749,11 @@
         const refreshTime = new Date();
         const branchLookup = buildBranchLookup(await loadSheetRowsByName("Data Siswa"));
         const refreshedData = normalizeData(buildAttendanceData(await loadSheetRows("0"), branchLookup));
-        const refreshedDrillData = buildDrillData(await loadSheetRows("246622240"));
+        const selectedBranch = $("branchSelect").value;
+        const refreshedDrillRows = selectedBranch
+          ? await loadDrillRowsForBranch(selectedBranch)
+          : (await Promise.all(branches.map((branch) => loadDrillRowsForBranch(branch)))).flat();
+        const refreshedDrillData = buildDrillData(refreshedDrillRows);
         validateRefreshedAttendanceData(refreshedData);
         data = refreshedData;
         drillData = refreshedDrillData;
@@ -2194,7 +2765,7 @@
         fillDrillFilters();
         if (keepFilters) render();
         else resetFilters();
-        renderDrill();
+        scheduleDrillRender();
         $("dataSubtitle").textContent += ` | diperbarui ${refreshTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
         updateLiveScriptStatus(refreshTime, "Data live");
       } catch (error) {
@@ -2222,6 +2793,13 @@
       if (!(refreshedData.records || []).length) {
         throw new Error("entri presensi terbaca kosong");
       }
+      const fallbackStatuses = new Set((window.ATTENDANCE_DATA?.records || []).map((record) => record.status));
+      const refreshedStatuses = new Set((refreshedData.records || []).map((record) => record.status));
+      ["Izin", "Sakit"].forEach((status) => {
+        if (fallbackStatuses.has(status) && !refreshedStatuses.has(status)) {
+          throw new Error(`${status} tidak terbaca dari refresh live`);
+        }
+      });
     }
 
     function updateLiveScriptStatus(date, label = "Data live") {
@@ -2298,7 +2876,7 @@
     async function loadSheetRowsByName(sheetName) {
       if (USE_NETLIFY_PROXY) {
         try {
-          const response = await fetch(`${SHEET_PROXY_URL}?sheet=${encodeURIComponent(sheetName)}&cachebust=${Date.now()}`, { cache: "no-store" });
+          const response = await fetch(`${SHEET_PROXY_URL}?sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent("A:V")}&cachebust=${Date.now()}`, { cache: "no-store" });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           return parseCsv(await response.text());
         } catch (error) {
@@ -2344,7 +2922,7 @@
           cleanup();
           reject(new Error("Fallback script failed"));
         };
-        const sheetParam = sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : `&gid=${encodeURIComponent(gid)}`;
+        const sheetParam = sheetName ? `&sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent("A:V")}` : `&gid=${encodeURIComponent(gid)}`;
         script.src = `https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU/gviz/tq?tqx=out:json;responseHandler:${callbackName};reqId:${Date.now()}&headers=0${sheetParam}&cachebust=${Date.now()}`;
         document.body.appendChild(script);
       });
@@ -2870,10 +3448,16 @@
     function classOrder(kelas) {
       const text = String(kelas || "").toUpperCase();
       if (!text || text === "-") return 999;
-      if (text.includes("SIAP SNBT")) return 1300;
-      if (text.includes("KEDINASAN")) return 1400;
-      const gradeMatch = text.match(/\b(6|7|8|9|10|11|12)\b/);
-      if (gradeMatch) return Number(gradeMatch[1]) * 100;
+      if (text.includes("SIAP SNBT")) return 130000;
+      if (text.includes("KEDINASAN")) return 140000;
+      const gradeMatch = text.match(/\b(1|2|3|4|5|6|7|8|9|10|11|12)\b/);
+      if (gradeMatch) {
+        const roomMatch = text.match(/\b([A-Z]+)(\d*)\.(\d+)$/i);
+        const roomLetter = roomMatch ? roomMatch[1].toUpperCase() : "";
+        const roomNumber = roomMatch ? Number(roomMatch[3]) : 0;
+        const roomLetterOrder = { R: 1, L: 2, P: 3 }[roomLetter] || 9;
+        return Number(gradeMatch[1]) * 10000 + roomLetterOrder * 100 + roomNumber;
+      }
       return 900;
     }
 
