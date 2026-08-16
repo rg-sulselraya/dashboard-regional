@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitoring Kesiswaan Sulsel Raya</title>
   <script src="chart.umd.min.js?v=20260815w"></script>
-  <script src="attendance-data.js?v=20260815w"></script>
+  <script src="attendance-data.js?v=20260816x"></script>
   <script src="drill-data.js?v=20260815w"></script>
   <style>
     :root {
@@ -55,6 +55,7 @@
     button.refresh { color: var(--green); border-color: rgba(16, 185, 129, 0.28); }
     button.danger { color: var(--red); border-color: rgba(239, 68, 68, 0.28); }
     button.download-pdf { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #fff; background: #F58220; border-color: #F58220; min-width: 126px; box-shadow: 0 10px 22px rgba(245, 130, 32, 0.22); }
+    button.student-download { height: 18px; min-width: 82px; padding: 0 8px; border: 0; border-radius: 5px; color: #fff; background: var(--green); font-size: 10px; font-weight: 950; line-height: 1; letter-spacing: 0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.18); }
     button:disabled { opacity: 0.62; cursor: progress; }
     main { padding: 22px 0 34px; }
     body.locked header, body.locked main { display: none; }
@@ -93,6 +94,46 @@
     .stat .hint .attendance-badge.mid { color: var(--ink); background: rgba(255, 255, 255, 0.9); border: 1px solid var(--line); }
     .stat .hint .attendance-badge.high { color: #ffffff; background: var(--green); }
     .grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+    .percent-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 58px; height: 28px; padding: 0 10px; border-radius: 999px; font-weight: 900; border: 1px solid rgba(15, 31, 51, 0.08); }
+    .student-profile { margin: 0 0 12px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+    .student-profile-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .student-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .student-profile-title { margin: 0; font-size: 17px; line-height: 1.2; }
+    .student-profile-meta { margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 750; }
+    .student-status { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 900; white-space: nowrap; }
+    .student-status.good { color: #047857; background: #ecfdf5; }
+    .student-status.warn { color: #b45309; background: #fffbeb; }
+    .student-status.bad { color: #b91c1c; background: #fef2f2; }
+    .student-profile-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .class-profile-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .student-profile-metric { min-height: 72px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; }
+    .student-profile-metric span { display: block; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .student-profile-metric strong { display: block; margin-top: 7px; font-size: 22px; line-height: 1.05; }
+    .student-profile-metric small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; font-weight: 750; }
+    .student-profile-analysis { margin-top: 12px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; color: #334155; }
+    .student-profile-analysis h3 { margin: 0 0 7px; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .student-profile-analysis p { margin: 0; font-size: 13px; line-height: 1.5; font-weight: 500; }
+    .student-profile-detail { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 10px; margin-top: 12px; }
+    .student-profile-box { min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: #f8fbfd; }
+    .student-profile-box h3 { margin: 0 0 8px; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .student-profile-box h3.student-week-title { color: #475569; }
+    .student-week-list, .student-absence-list { display: grid; gap: 7px; }
+    .student-week-row { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(0, 2fr) auto; align-items: center; gap: 10px; color: #334155; font-size: 12px; font-weight: 500; }
+    .student-week-row > span { color: #334155; }
+    .student-week-percent { font-weight: 850; }
+    .student-week-percent.high { color: var(--green); }
+    .student-week-percent.mid { color: var(--amber); }
+    .student-week-percent.low { color: var(--red); }
+    .student-week-bar { height: 9px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+    .student-week-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--green)); }
+    .student-absence-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); color: #334155; font-size: 12px; font-weight: 800; }
+    .student-absence-row:last-child { border-bottom: 0; }
+    .class-priority-list { display: grid; gap: 8px; }
+    .class-priority-title { color: #991b1b !important; }
+    .class-priority-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 54px; padding: 9px 10px; border: 1px solid #d7e7f2; border-left: 4px solid #991b1b; border-radius: 8px; color: #334155; background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%); font-size: 12px; font-weight: 500; }
+    .class-priority-rank { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; color: #b91c1c; background: #fef2f2; font-size: 12px; font-weight: 900; }
+    .class-priority-row strong { display: block; color: var(--ink); font-size: 13px; font-weight: 850; line-height: 1.2; }
+    .class-priority-row small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); min-width: 0; overflow: hidden; }
     .view[hidden] { display: none; }
     .placeholder { padding: 28px; color: var(--muted); }
@@ -234,6 +275,9 @@
       .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .grid { grid-template-columns: 1fr; }
       .leaderboard-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .student-profile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .class-profile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .student-profile-detail { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 640px) {
@@ -252,6 +296,9 @@
       .date-row { grid-template-columns: 1fr 1fr; }
       .date-cell:first-child { grid-column: 1 / -1; }
       .table-tools { flex-direction: column; }
+      .student-profile-grid { grid-template-columns: 1fr; }
+      .class-profile-grid { grid-template-columns: 1fr; }
+      .student-profile-head { grid-template-columns: 1fr; align-items: flex-start; }
     }
   </style>
 </head>
@@ -311,16 +358,19 @@
       <input id="regionalSelect" type="hidden" value="">
     </section>
 
-    <section class="stats" aria-label="Ringkasan">
-      <div class="stat"><div class="label" id="primaryCountLabel">Siswa</div><div class="value" id="studentCount">0</div><div class="hint" id="studentCountHint">sesuai filter</div></div>
+    <section class="stats" id="attendanceStats" aria-label="Ringkasan">
+      <div class="stat" id="studentSummaryCard"><div class="label" id="primaryCountLabel">Siswa</div><div class="value" id="studentCount">0</div><div class="hint" id="studentCountHint">sesuai filter</div></div>
       <div class="stat"><div class="label">Sesi Ideal</div><div class="value ideal" id="idealCount">0</div><div class="hint">sesi wajib hadir</div></div>
       <div class="stat"><div class="label">Hadir</div><div class="value good" id="presentCount">0</div><div class="hint" id="presentHint">0%</div></div>
       <div class="stat"><div class="label">Izin</div><div class="value permit" id="permitCount">0</div><div class="hint">hari izin</div></div>
       <div class="stat"><div class="label">Sakit</div><div class="value violet" id="sickCount">0</div><div class="hint">hari sakit</div></div>
-      <div class="stat"><div class="label">Alpa</div><div class="value bad" id="absentCount">0</div><div class="hint">hari tanpa keterangan</div></div>
+      <div class="stat"><div class="label">Tanpa Keterangan</div><div class="value bad" id="absentCount">0</div><div class="hint">hari tanpa keterangan</div></div>
     </section>
 
-    <section class="grid">
+    <section class="student-profile" id="studentProfilePanel" hidden aria-label="Profil kehadiran siswa"></section>
+    <section class="student-profile" id="classProfilePanel" hidden aria-label="Profil kehadiran kelas"></section>
+
+    <section class="grid" id="trendPanel">
       <div class="panel">
         <div class="panel-head">
           <h2 id="trendTitle">Perbandingan Sesi Ideal dan Hadir</h2>
@@ -332,29 +382,21 @@
       </div>
     </section>
 
-    <section class="panel" id="absencePanel" hidden>
-      <div class="panel-head">
-        <h2>Tanggal Tidak Hadir</h2>
-        <span class="pill" id="absenceCount">0 tanggal</span>
-      </div>
-      <div class="absence-list" id="absenceList"></div>
-    </section>
-
     <section class="panel">
       <div class="panel-head">
         <h2 id="attendanceTableTitle">Rekap Per Siswa, Bulan, Week</h2>
-        <div class="table-tools">
+        <div class="table-tools" id="attendanceTableTools">
           <select id="tableClassSelect" title="Filter kelas" aria-label="Filter kelas"></select>
           <input id="tableSearch" type="search" placeholder="Cari di tabel">
           <select id="sortSelect">
-            <option value="monthWeek:asc">Bulan & Week</option>
+            <option value="monthWeek:asc">Sort</option>
             <option value="attendanceRate:desc">Kehadiran tertinggi</option>
             <option value="attendanceRate:asc">Kehadiran terendah</option>
             <option value="idealSessions:desc">Sesi ideal terbanyak</option>
-            <option value="absent:desc">Alpa terbanyak</option>
+            <option value="absent:desc">Tanpa Keterangan terbanyak</option>
+            <option value="studentCount:desc">Jumlah siswa terbanyak</option>
             <option value="name:asc">Nama A-Z</option>
           </select>
-          <button id="downloadPdfBtn" class="download-pdf" title="Unduh PDF" aria-label="Unduh PDF"><span>↓</span><span>PDF</span></button>
         </div>
       </div>
       <div class="table-wrap">
@@ -369,7 +411,7 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
             </tr>
           </thead>
@@ -463,7 +505,7 @@
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
     const APPS_SCRIPT_URL = "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 9;
+    const LIVE_DATA_SCHEMA_VERSION = 10;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
     const LIVE_DRILL_SCHEMA_VERSION = 5;
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
@@ -587,7 +629,9 @@
         input.addEventListener("change", handleFilterInput);
       });
       $("resetBtn").addEventListener("click", resetFilters);
-      $("downloadPdfBtn").addEventListener("click", downloadStudentPdf);
+      document.addEventListener("click", (event) => {
+        if (event.target.closest("#studentProfileDownloadBtn")) downloadStudentPdf();
+      });
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
       $("refreshBtn").addEventListener("click", refreshData);
       $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
@@ -676,6 +720,8 @@
         lockedBranch = getLockedBranch();
         $("branchSelect").disabled = Boolean(lockedBranch);
         if (lockedBranch) $("branchSelect").value = lockedBranch;
+        updateClassOptions();
+        updateStudentSuggestions();
       };
 
       if (getAccess() === "ok") {
@@ -781,7 +827,7 @@
     }
 
     function updateClassOptions() {
-      const selectedBranch = $("branchSelect").value;
+      const selectedBranch = lockedBranch || $("branchSelect").value;
       const branchClasses = selectedBranch ? classesForBranch(selectedBranch) : [];
       const optionItems = branchClasses;
       const options = `<option value="">${selectedBranch ? "Semua kelas" : "Pilih cabang dulu"}</option>` + optionItems.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
@@ -789,6 +835,7 @@
         const select = $(id);
         const current = select.value;
         select.innerHTML = options;
+        select.disabled = !selectedBranch;
         select.value = optionItems.includes(current) ? current : "";
       });
       $("tableClassSelect").hidden = false;
@@ -796,7 +843,7 @@
     }
 
     function updateStudentSuggestions() {
-      const selectedBranch = $("branchSelect").value;
+      const selectedBranch = lockedBranch || $("branchSelect").value;
       const selectedClass = $("classSelect").value || $("tableClassSelect").value;
       if (!selectedClass) {
         $("searchInput").value = "";
@@ -854,6 +901,8 @@
       if (!student) return false;
       const start = itemWeekStart(item);
       if (start && start > DASHBOARD_MIN_TODAY) return false;
+      const currentOrder = dashboardCurrentPeriodOrder();
+      if (currentOrder != null && Number.isFinite(item.periodOrder) && item.periodOrder > currentOrder) return false;
       const studentStart = attendanceStartDate(student);
       if (studentStart) {
         const end = item.weekEnd || item.date || start;
@@ -883,8 +932,18 @@
       if (item.weekStart) return item.weekStart;
       const period = data.weeks.find((week) => week.key === item.weekKey);
       if (period?.start) return period.start;
+      const periodByLabel = data.weeks.find((week) => week.month === item.month && week.week === item.week && week.start);
+      if (periodByLabel?.start) return periodByLabel.start;
       const keyStart = String(item.weekKey || "").split("|")[2];
       return String(keyStart || "").match(/^\d{4}-\d{2}-\d{2}$/) ? keyStart : "";
+    }
+
+    function dashboardCurrentPeriodOrder() {
+      const activeWeeks = data.weeks
+        .filter((week) => week.start && week.start <= DASHBOARD_MIN_TODAY)
+        .sort(comparePeriod);
+      const currentWeek = activeWeeks.at(-1);
+      return currentWeek && Number.isFinite(currentWeek.order) ? currentWeek.order : null;
     }
 
     function filteredRecords(filters) {
@@ -901,20 +960,22 @@
         const key = `${record.studentId}|${record.weekKey}`;
         if (!grouped.has(key)) return;
         const row = grouped.get(key);
+        const status = recordStatus(record);
         row.total += 1;
         row.sessions += record.sessions || 0;
-        if (record.status === "Hadir") row.present += record.sessions || 0;
-        if (record.status === "Izin") row.permit += 1;
-        if (record.status === "Sakit") row.sick += 1;
-        if (record.status === "Alpa") row.absent += 1;
+        if (status === "Hadir") row.present += record.sessions || 0;
+        if (status === "Izin") row.permit += 1;
+        if (status === "Sakit") row.sick += 1;
+        if (status === "Alpa") row.absent += 1;
       });
       let rows = [...grouped.values()].map((row) => ({
         ...row,
         absent: row.absent,
-        attendanceRate: row.idealSessions ? row.present / row.idealSessions : (row.total ? row.present / row.total : 0),
+        attendanceRate: attendanceRateValue(row),
         monthWeek: `${String(row.periodOrder ?? 999).padStart(3, "0")}-${row.student}`
       }));
       if (applyMode && attendanceMode === "student" && !filters.branch && !filters.kelas && !filters.search) rows = summarizeAttendanceRowsByBranch(rows);
+      else if (applyMode && attendanceMode === "student" && filters.branch && !filters.kelas && !filters.search) rows = summarizeAttendanceRowsByClass(rows);
       else if (applyMode && attendanceMode === "student" && !filters.search) rows = summarizeAttendanceRowsByStudent(rows);
       if (filters.tableSearch) {
         rows = rows.filter((row) => `${row.student} ${row.class} ${row.month || ""} ${row.week || ""}`.toLowerCase().includes(filters.tableSearch));
@@ -924,8 +985,8 @@
         if (a.aggregateClass && b.aggregateClass && key === "monthWeek") {
           return compareClass(a.class, b.class);
         }
-        const av = key === "name" ? a.student : a[key];
-        const bv = key === "name" ? b.student : b[key];
+        const av = key === "name" ? (a.aggregateClass ? a.class : a.student) : a[key];
+        const bv = key === "name" ? (b.aggregateClass ? b.class : b.student) : b[key];
         const result = typeof av === "string" ? av.localeCompare(bv, "id") : av - bv;
         return direction === "desc" ? -result : result;
       });
@@ -948,7 +1009,7 @@
       });
       return [...grouped.values()].map((row) => ({
         ...row,
-        attendanceRate: row.idealSessions ? row.present / row.idealSessions : 0,
+        attendanceRate: attendanceRateValue(row),
         monthWeek: row.student
       }));
     }
@@ -971,7 +1032,7 @@
       return [...grouped.values()].map((row) => ({
         ...row,
         studentCount: row.students.size,
-        attendanceRate: row.idealSessions ? row.present / row.idealSessions : 0,
+        attendanceRate: attendanceRateValue(row),
         monthWeek: row.class
       })).filter((row) => row.class && row.class !== "-").sort((a, b) => compareClass(a.class, b.class));
     }
@@ -999,7 +1060,7 @@
           studentCount: row.students.size,
           classCount,
           efficiency: classCount ? row.students.size / classCount : 0,
-          attendanceRate: row.idealSessions ? row.present / row.idealSessions : 0,
+          attendanceRate: attendanceRateValue(row),
           monthWeek: row.branch
         };
       }).filter((row) => row.branch && row.branch !== "-").sort((a, b) => a.branch.localeCompare(b.branch, "id"));
@@ -1042,16 +1103,23 @@
 
     function render() {
       const filters = currentFilters();
-      $("attendanceTableTitle").textContent = !filters.branch && !filters.kelas && !filters.search ? "Rekap Semua Cabang" : "Rekap Per Siswa, Bulan, Week";
+      const selectedStudent = findAttendanceStudent(filters.search);
+      $("attendanceTableTitle").textContent = selectedStudent ? "Detail Setiap Week" : filters.kelas ? "Detail per Siswa" : filters.branch ? "Rekap per Kelas" : !filters.branch && !filters.kelas && !filters.search ? "Rekap Semua Cabang" : "Rekap Per Siswa, Bulan, Week";
       const records = filteredRecords(filters);
       const rows = filteredWeekRows(filters);
       const totals = countStatusesFromRows(rows);
       const idealTotal = rows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
       const presentRate = idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0;
       const isBranchSummary = !filters.branch && !filters.kelas && !filters.search;
-      $("primaryCountLabel").textContent = isBranchSummary ? "Cabang" : "Siswa";
+      $("attendanceStats").hidden = Boolean(selectedStudent || filters.kelas);
+      $("trendPanel").hidden = Boolean(selectedStudent || filters.kelas);
+      $("attendanceTableTools").hidden = false;
+      $("studentSummaryCard").hidden = Boolean(filters.search);
+      $("primaryCountLabel").textContent = isBranchSummary ? "Cabang" : filters.branch && !filters.kelas ? "Jumlah Kelas" : "Siswa";
       const primaryCount = isBranchSummary
         ? rows.filter((row) => row.aggregateBranch && row.branch && row.branch !== "-").length
+        : filters.branch && !filters.kelas
+          ? rows.filter((row) => row.aggregateClass && row.class && row.class !== "-").length
         : new Set(rows.map((row) => row.studentId)).size;
       $("studentCount").textContent = numberFmt.format(primaryCount);
       updateStudentCountHint(primaryCount, filters);
@@ -1062,15 +1130,279 @@
       $("absentCount").textContent = numberFmt.format(totals.Alpa);
       $("presentHint").innerHTML = `<span class="attendance-badge ${attendanceRateLevel(presentRate)}">${presentRate}%</span> dari sesi ideal`;
       $("periodLabel").textContent = periodText(filters);
+      renderStudentProfile(rows, filters, selectedStudent);
+      renderClassProfile(rows, filters, selectedStudent);
       renderTable(rows);
-      renderAbsences(records, filters);
       renderCharts(records, rows);
+    }
+
+    function renderStudentProfile(rows, filters, student) {
+      const panel = $("studentProfilePanel");
+      panel.hidden = !student;
+      if (!student) {
+        panel.innerHTML = "";
+        return;
+      }
+      const studentRows = rows
+        .filter((row) => row.studentId === student.id || String(row.student || "").toLowerCase() === student.name.toLowerCase())
+        .sort((a, b) => (a.periodOrder ?? 999) - (b.periodOrder ?? 999));
+      const totals = countStatusesFromRows(studentRows);
+      const idealTotal = studentRows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
+      const attendancePercent = idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0;
+      const statusLevel = attendancePercent >= 90 ? "good" : attendancePercent >= 75 ? "warn" : "bad";
+      const statusText = statusLevel === "good" ? "Aman" : statusLevel === "warn" ? "Perlu Perhatian" : "Kritis";
+      const classAverage = student.class ? classAttendanceAverage(student.class, filters) : null;
+      const absenceRecords = studentAbsenceRecords(student, filters);
+      const latestAbsence = absenceRecords.at(-1);
+      const classDelta = classAverage == null ? null : attendancePercent - classAverage;
+      const analysisText = studentAttendanceAnalysis({
+        rows: studentRows,
+        totals,
+        idealTotal,
+        attendancePercent,
+        statusText,
+        classAverage,
+        classDelta,
+        latestAbsence,
+        absenceRecords
+      });
+      const weekRows = studentTrendRows(studentRows, student).map((row) => {
+        const percent = row.idealSessions ? Math.round((row.present || 0) / row.idealSessions * 100) : 0;
+        return `
+          <div class="student-week-row">
+            <span>${escapeHtml(studentTrendWeekLabel(row))}</span>
+            <div class="student-week-bar"><span style="width:${Math.max(0, Math.min(100, percent))}%"></span></div>
+            <strong class="student-week-percent ${attendanceRateLevel(percent)}">${percent}%</strong>
+        </div>`;
+      }).join("") || `<div class="empty">Belum ada data week pada filter ini.</div>`;
+      const absenceRows = absenceRecords.length ? absenceRecords.slice(-4).map((record) => `
+        <div class="student-absence-row">
+          <span>${formatLongDate(record.date)}</span>
+          <span class="status-badge status-${record.status}">${statusLabel(record.status)}</span>
+        </div>
+      `).join("") : `<div class="empty">Tidak ada izin, sakit, atau tanpa keterangan.</div>`;
+      panel.innerHTML = `
+        <div class="student-profile-head">
+          <div>
+            <div class="student-title-row">
+              <h2 class="student-profile-title">${escapeHtml(student.name)}</h2>
+              <button id="studentProfileDownloadBtn" class="student-download" type="button" title="Unduh PDF" aria-label="Unduh PDF">DOWNLOAD</button>
+            </div>
+            <div class="student-profile-meta">${escapeHtml(student.class || "-")} · ${escapeHtml(student.branch || "-")} · ${periodText(filters)}</div>
+          </div>
+          <span class="student-status ${statusLevel}">${statusText}</span>
+        </div>
+        <div class="student-profile-grid">
+          <div class="student-profile-metric"><span>Sesi Ideal</span><strong class="ideal">${numberFmt.format(idealTotal)}</strong><small>sesi wajib hadir</small></div>
+          <div class="student-profile-metric"><span>Hadir</span><strong class="good">${numberFmt.format(totals.Hadir)}</strong><small>${attendancePercent}% dari sesi ideal</small></div>
+          <div class="student-profile-metric"><span>Izin</span><strong class="permit">${numberFmt.format(totals.Izin)}</strong><small>hari izin</small></div>
+          <div class="student-profile-metric"><span>Sakit</span><strong class="violet">${numberFmt.format(totals.Sakit)}</strong><small>hari sakit</small></div>
+          <div class="student-profile-metric"><span>Tanpa Keterangan</span><strong class="bad">${numberFmt.format(totals.Alpa)}</strong><small>tanpa keterangan</small></div>
+        </div>
+        <div class="student-profile-detail">
+          <div class="student-profile-box">
+            <h3 class="student-week-title">Tren Per Week</h3>
+            <div class="student-week-list">${weekRows}</div>
+          </div>
+          <div class="student-profile-box">
+            <h3>Tanggal Tidak Hadir</h3>
+            <div class="student-absence-list">${absenceRows}</div>
+          </div>
+        </div>
+        <div class="student-profile-analysis">
+          <h3>Catatan Wali Kelas</h3>
+          <p>${escapeHtml(analysisText)}</p>
+        </div>`;
+    }
+
+    function renderClassProfile(rows, filters, selectedStudent) {
+      const panel = $("classProfilePanel");
+      const showPanel = Boolean(filters.kelas && !selectedStudent);
+      panel.hidden = !showPanel;
+      if (!showPanel) {
+        panel.innerHTML = "";
+        return;
+      }
+      const totals = countStatusesFromRows(rows);
+      const idealTotal = rows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
+      const attendancePercent = idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0;
+      const statusLevel = attendancePercent >= 90 ? "good" : attendancePercent >= 75 ? "warn" : "bad";
+      const statusText = statusLevel === "good" ? "Aman" : statusLevel === "warn" ? "Perlu Perhatian" : "Kritis";
+      const studentCount = new Set(rows.map((row) => row.studentId || row.student)).size;
+      const classWeekRows = filteredWeekRows(filters, false);
+      const trendRows = summarizeAttendanceRowsByClassWeek(classWeekRows);
+      const priorityRows = summarizeAttendanceRowsByStudent(classWeekRows)
+        .filter((row) => row.student)
+        .sort((a, b) => (b.absent || 0) - (a.absent || 0) || a.attendanceRate - b.attendanceRate || a.student.localeCompare(b.student, "id"))
+        .slice(0, 5);
+      const weekRows = trendRows.length ? trendRows.map((row) => {
+        const percent = row.idealSessions ? Math.round((row.present || 0) / row.idealSessions * 100) : 0;
+        return `
+          <div class="student-week-row">
+            <span>${escapeHtml(studentTrendWeekLabel(row))}</span>
+            <div class="student-week-bar"><span style="width:${Math.max(0, Math.min(100, percent))}%"></span></div>
+            <strong class="student-week-percent ${attendanceRateLevel(percent)}">${percent}%</strong>
+          </div>`;
+      }).join("") : `<div class="empty">Belum ada data week pada filter ini.</div>`;
+      const priorityList = priorityRows.length ? priorityRows.map((row, index) => {
+        const percent = Math.round((row.attendanceRate || 0) * 100);
+        return `
+          <div class="class-priority-row">
+            <span class="class-priority-rank">${index + 1}</span>
+            <div><strong>${escapeHtml(row.student)}</strong><small>${escapeHtml(priorityAbsenceSummary(row))}</small></div>
+            ${attendancePercentBadge(percent)}
+          </div>`;
+      }).join("") : `<div class="empty">Tidak ada siswa prioritas pada filter ini.</div>`;
+      panel.innerHTML = `
+        <div class="student-profile-head">
+          <div>
+            <h2 class="student-profile-title">Profil Kehadiran Kelas ${escapeHtml(filters.kelas)}</h2>
+            <div class="student-profile-meta">${numberFmt.format(studentCount)} siswa · ${periodText(filters)}</div>
+          </div>
+          <span class="student-status ${statusLevel}">${statusText}</span>
+        </div>
+        <div class="student-profile-grid class-profile-grid">
+          <div class="student-profile-metric"><span>Siswa</span><strong>${numberFmt.format(studentCount)}</strong><small>siswa aktif</small></div>
+          <div class="student-profile-metric"><span>Sesi Ideal</span><strong class="ideal">${numberFmt.format(idealTotal)}</strong><small>sesi wajib hadir</small></div>
+          <div class="student-profile-metric"><span>Hadir</span><strong class="good">${numberFmt.format(totals.Hadir)}</strong><small>${attendancePercent}% dari sesi ideal</small></div>
+          <div class="student-profile-metric"><span>Izin</span><strong class="permit">${numberFmt.format(totals.Izin)}</strong><small>hari izin</small></div>
+          <div class="student-profile-metric"><span>Sakit</span><strong class="violet">${numberFmt.format(totals.Sakit)}</strong><small>hari sakit</small></div>
+          <div class="student-profile-metric"><span>Tanpa Keterangan</span><strong class="bad">${numberFmt.format(totals.Alpa)}</strong><small>tanpa keterangan</small></div>
+        </div>
+        <div class="student-profile-detail">
+          <div class="student-profile-box">
+            <h3 class="student-week-title">Tren Per Week</h3>
+            <div class="student-week-list">${weekRows}</div>
+          </div>
+          <div class="student-profile-box">
+            <h3 class="class-priority-title">Siswa Prioritas</h3>
+            <div class="class-priority-list">${priorityList}</div>
+          </div>
+        </div>`;
+    }
+
+    function studentAbsenceRecords(student, filters) {
+      const selectedName = student.name.toLowerCase();
+      return data.records
+        .filter((record) => {
+          const status = recordStatus(record);
+          if (record.studentId !== student.id && String(record.student || "").toLowerCase() !== selectedName) return false;
+          if (!weekMatches(record, filters)) return false;
+          return ["Alpa", "Izin", "Sakit"].includes(status);
+        })
+        .map((record) => ({ ...record, status: recordStatus(record) }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+    function studentTrendRows(rows, student) {
+      const startDate = attendanceStartDate(student);
+      return rows
+        .filter((row) => {
+          const weekEnd = row.weekEnd || itemWeekStart(row);
+          return !startDate || !weekEnd || weekEnd >= startDate;
+        })
+        .sort((a, b) => {
+          const dateCompare = itemWeekStart(a).localeCompare(itemWeekStart(b));
+          if (dateCompare) return dateCompare;
+          return (a.periodOrder ?? 999) - (b.periodOrder ?? 999);
+        });
+    }
+    function studentTrendWeekLabel(row) {
+      const week = row.week || "-";
+      const month = row.month || monthNameFromIso(itemWeekStart(row));
+      return month ? `${week} ${month}` : week;
+    }
+    function monthNameFromIso(isoDate) {
+      if (!isoDate) return "";
+      const monthIndex = Number(String(isoDate).slice(5, 7)) - 1;
+      const names = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      return names[monthIndex] || "";
+    }
+
+    function classAttendanceAverage(className, filters) {
+      const classRows = filteredWeekRows({ ...filters, search: "", kelas: className, tableSearch: "" }, false);
+      const ideal = classRows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
+      const present = classRows.reduce((sum, row) => sum + (row.present || 0), 0);
+      return ideal ? Math.round((present / ideal) * 100) : null;
+    }
+
+    function studentTrendText(rows) {
+      if (rows.length < 2) return "Data tren masih terbatas.";
+      const first = rows[0].idealSessions ? Math.round((rows[0].present || 0) / rows[0].idealSessions * 100) : 0;
+      const lastRow = rows.at(-1);
+      const last = lastRow.idealSessions ? Math.round((lastRow.present || 0) / lastRow.idealSessions * 100) : 0;
+      if (last >= first + 5) return "Tren kehadiran membaik dibanding awal periode.";
+      if (last <= first - 5) return "Tren kehadiran menurun dibanding awal periode.";
+      return "Tren kehadiran relatif stabil pada periode ini.";
+    }
+
+    function studentAttendanceAnalysis({ rows, totals, idealTotal, attendancePercent, statusText, classAverage, classDelta, latestAbsence, absenceRecords }) {
+      const trend = studentTrendText(rows);
+      if (!idealTotal) return "Belum ada sesi ideal pada filter ini. Wali kelas dapat menunggu data presensi berikutnya sebelum menyampaikan kesimpulan kepada orang tua.";
+      const sessionsToSafe = sessionsNeededForSafeAttendance(idealTotal, totals.Hadir || 0);
+      const classComparison = classAverage == null
+        ? "Perbandingan dengan rata-rata kelas belum tersedia."
+        : classDelta >= 0
+          ? `Kehadiran ini ${classDelta}% di atas rata-rata kelas (${classAverage}%).`
+          : `Kehadiran ini ${Math.abs(classDelta)}% di bawah rata-rata kelas (${classAverage}%).`;
+      const absenceSummary = absenceSummaryText(totals);
+      const absence = absenceRecords.length
+        ? `Tercatat ${absenceSummary}.`
+        : "Tidak ada catatan izin, sakit, atau tanpa keterangan pada periode ini.";
+      if (statusText === "Aman") {
+        const note = (totals.Alpa || 0) > 0
+          ? "Capaian ini sudah baik, namun catatan tanpa keterangan sebaiknya tidak terulang agar kebiasaan hadir tetap kuat."
+          : "Ini merupakan capaian yang baik dan perlu dipertahankan melalui rutinitas hadir yang konsisten.";
+        return `Selamat, kehadiran siswa sudah masuk kategori Aman dengan capaian ${attendancePercent}% (${numberFmt.format(totals.Hadir)} dari ${numberFmt.format(idealTotal)} sesi). ${note} ${trend} ${classComparison} ${absence}`;
+      }
+      if (statusText === "Perlu Perhatian") {
+        const action = attendanceActionText(totals, sessionsToSafe, "Agar naik ke kategori Aman");
+        return `Kehadiran siswa masih berada pada kategori Perlu Perhatian dengan capaian ${attendancePercent}% (${numberFmt.format(totals.Hadir)} dari ${numberFmt.format(idealTotal)} sesi). Kondisi ini masih sangat mungkin diperbaiki jika kehadiran dijaga lebih konsisten mulai week berikutnya. ${trend} ${classComparison} ${absence} ${action}`;
+      }
+      const criticalAction = attendanceActionText(totals, sessionsToSafe, "Untuk menuju kategori Aman");
+      return `Kehadiran siswa masih berada pada kategori Kritis dengan capaian ${attendancePercent}% (${numberFmt.format(totals.Hadir)} dari ${numberFmt.format(idealTotal)} sesi). Kondisi ini perlu segera diperbaiki agar siswa tidak semakin tertinggal dalam rutinitas belajar. ${trend} ${classComparison} ${absence} ${criticalAction}`;
+    }
+
+    function sessionsNeededForSafeAttendance(idealSessions, presentSessions) {
+      if (!idealSessions) return 0;
+      const needed = Math.ceil((0.9 * idealSessions - presentSessions) / 0.1);
+      return Math.max(0, needed);
+    }
+
+    function attendanceActionText(totals, sessionsToSafe, prefix) {
+      const sessionText = sessionsToSafe > 0
+        ? `menjaga hadir penuh sekitar ${numberFmt.format(sessionsToSafe)} sesi belajar berikutnya agar persentase dapat mencapai minimal 90%`
+        : "mempertahankan hadir penuh pada sesi berikutnya";
+      if ((totals.Alpa || 0) > 0) {
+        return `${prefix}, catatan tanpa keterangan perlu dihentikan pada periode evaluasi berikutnya, lalu siswa perlu ${sessionText}.`;
+      }
+      return `${prefix}, siswa perlu ${sessionText} dan tetap menjaga komunikasi jika berhalangan hadir.`;
+    }
+
+    function absenceSummaryText(totals) {
+      const items = [
+        { value: totals.Izin || 0, label: "izin" },
+        { value: totals.Sakit || 0, label: "sakit" },
+        { value: totals.Alpa || 0, label: "tanpa keterangan" }
+      ].filter((item) => item.value > 0);
+      if (!items.length) return "tidak ada hari tidak hadir";
+      const parts = items.map((item) => `${numberFmt.format(item.value)} hari ${item.label}`);
+      if (parts.length === 1) return parts[0];
+      if (parts.length === 2) return `${parts[0]} dan ${parts[1]}`;
+      return `${parts.slice(0, -1).join(", ")}, dan ${parts.at(-1)}`;
+    }
+
+    function priorityAbsenceSummary(row) {
+      return absenceSummaryText({ Izin: row.permit || 0, Sakit: row.sick || 0, Alpa: row.absent || 0 });
     }
 
     function updateStudentCountHint(primaryCount, filters) {
       const hint = $("studentCountHint");
       if (!filters.branch && !filters.kelas && !filters.search) {
         hint.textContent = "jumlah cabang";
+        return;
+      }
+      if (filters.branch && !filters.kelas && !filters.search) {
+        hint.textContent = "kelas sesuai filter";
         return;
       }
       if (attendanceMode !== "student") {
@@ -1091,19 +1423,34 @@
 
     function attendanceRateLevel(percent) {
       const value = Math.max(0, Math.min(100, Number(percent) || 0));
-      if (value > 85) return "high";
+      if (value >= 90) return "high";
       if (value >= 75) return "mid";
       return "low";
     }
 
     function countStatuses(records) {
       return records.reduce((acc, record) => {
-        if (record.status === "Hadir") acc.Hadir += record.sessions || 0;
-        if (record.status === "Izin") acc.Izin += 1;
-        if (record.status === "Sakit") acc.Sakit += 1;
-        if (record.status === "Alpa") acc.Alpa += 1;
+        const status = recordStatus(record);
+        if (status === "Hadir") acc.Hadir += record.sessions || 0;
+        if (status === "Izin") acc.Izin += 1;
+        if (status === "Sakit") acc.Sakit += 1;
+        if (status === "Alpa") acc.Alpa += 1;
         return acc;
       }, { Hadir: 0, Izin: 0, Sakit: 0, Alpa: 0 });
+    }
+
+    function recordStatus(record) {
+      const status = statusKind(record?.status);
+      const rawStatus = statusKind(record?.raw);
+      if (["Izin", "Sakit"].includes(rawStatus)) return rawStatus;
+      if (["Izin", "Sakit"].includes(status)) return status;
+      if (["Hadir", "Alpa"].includes(rawStatus)) return rawStatus;
+      if (["Hadir", "Alpa"].includes(status)) return status;
+      return status || rawStatus;
+    }
+
+    function statusLabel(status) {
+      return status === "Alpa" ? "Tanpa Keterangan" : status;
     }
 
     function countStatusesFromRows(rows) {
@@ -1114,6 +1461,10 @@
         acc.Alpa += row.absent || 0;
         return acc;
       }, { Hadir: 0, Izin: 0, Sakit: 0, Alpa: 0 });
+    }
+
+    function attendanceRateValue(row) {
+      return row.idealSessions ? (row.present || 0) / row.idealSessions : 0;
     }
 
     function renderTable(rows) {
@@ -1127,9 +1478,12 @@
       const colSpan = isBranchAggregate ? 10 : isClassAggregate || isAggregate ? 8 : canEditRows ? 11 : 10;
       $("studentRows").closest("table")?.classList.toggle("branch-summary-table", isBranchAggregate);
       $("regionalFilterPanel").hidden = !isBranchAggregate;
-      $("tableClassSelect").hidden = isBranchAggregate;
-      $("tableSearch").hidden = isBranchAggregate;
-      $("sortSelect").hidden = isBranchAggregate;
+      $("tableClassSelect").hidden = isBranchAggregate || Boolean(filters.search) || Boolean(filters.branch);
+      $("tableSearch").hidden = isBranchAggregate || Boolean(filters.search) || Boolean(filters.kelas);
+      $("tableSearch").placeholder = filters.branch && !filters.kelas ? "Cari kelas" : "Cari di tabel";
+      $("sortSelect").hidden = isBranchAggregate || Boolean(filters.search);
+      const nameSortOption = $("sortSelect").querySelector('option[value="name:asc"]');
+      if (nameSortOption) nameSortOption.textContent = filters.branch && !filters.kelas ? "Nama kelas A-Z" : "Nama A-Z";
       $("studentRowsHead").innerHTML = isClassWeekAggregate ? `<tr>
               <th>Kelas</th>
               <th>Bulan</th>
@@ -1139,7 +1493,7 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
             </tr>` : isBranchAggregate ? `<tr>
               <th>Nama Cabang</th>
@@ -1149,7 +1503,7 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
               <th>Siswa/Rombel</th>
             </tr>` : isClassAggregate ? `<tr>
@@ -1159,7 +1513,7 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
             </tr>` : isAggregate ? `<tr>
               <th>Nama Siswa</th>
@@ -1168,7 +1522,7 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
             </tr>` : `<tr>
               <th>Nama</th>
@@ -1179,19 +1533,26 @@
               <th>Hadir</th>
               <th>Izin</th>
               <th>Sakit</th>
-              <th>Alpa</th>
+              <th>Tanpa Keterangan</th>
               <th>% Hadir</th>
               ${canEditRows ? "<th>Edit</th>" : ""}
             </tr>`;
       $("studentRows").innerHTML = rows.map((row) => {
-        const cls = row.attendanceRate >= 0.8 ? "good" : row.attendanceRate >= 0.6 ? "warn" : "bad";
+        const displayRate = Math.round(row.attendanceRate * 100);
+        const cls = displayRate >= 80 ? "good" : displayRate >= 60 ? "warn" : "bad";
         const studentKey = `${String(row.student || "").toLowerCase()}|${row.weekKey || ""}`;
-        const studentButton = `<button class="name-toggle" onclick="toggleAttendanceAbsences('${encodeURIComponent(row.student || "")}', '${encodeURIComponent(row.weekKey || "")}')">${escapeHtml(row.student || "")}</button>`;
+        const studentAction = filters.kelas
+          ? `selectAttendanceStudent('${encodeURIComponent(row.student || "")}')`
+          : `toggleAttendanceAbsences('${encodeURIComponent(row.student || "")}', '${encodeURIComponent(row.weekKey || "")}')`;
+        const studentButton = `<button class="name-toggle" onclick="${studentAction}">${escapeHtml(row.student || "")}</button>`;
         const inlineAbsences = !isClassAggregate && expandedAttendanceStudent === studentKey
           ? renderInlineAbsences(row.student, colSpan, row.weekKey || "")
           : "";
         const classKey = `${String(row.class || "").toLowerCase()}|${row.weekKey || ""}`;
-        const classButton = `<button class="name-toggle" onclick="toggleClassBottomStudents('${encodeURIComponent(row.class || "")}', '${encodeURIComponent(row.weekKey || "")}')">${escapeHtml(row.class || "")}</button>`;
+        const classAction = isClassAggregate
+          ? `selectAttendanceClass('${encodeURIComponent(row.class || "")}')`
+          : `toggleClassBottomStudents('${encodeURIComponent(row.class || "")}', '${encodeURIComponent(row.weekKey || "")}')`;
+        const classButton = `<button class="name-toggle" onclick="${classAction}">${escapeHtml(row.class || "")}</button>`;
         const inlineClassBottom = !filters.kelas && !isBranchAggregate && (isClassAggregate || isClassWeekAggregate) && expandedAttendanceClass === classKey
           ? renderClassBottomStudents(row.class, colSpan)
           : "";
@@ -1206,9 +1567,9 @@
           <td class="permit">${numberFmt.format(row.permit)}</td>
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
-          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td>${attendancePercentBadge(displayRate)}</td>
         </tr>${inlineClassBottom}` : isBranchAggregate ? `<tr>
-          <td class="name">${escapeHtml(row.branch || row.class)}</td>
+          <td class="name"><button class="name-toggle" onclick="selectAttendanceBranch('${encodeURIComponent(row.branch || row.class || "")}')">${escapeHtml(row.branch || row.class || "")}</button></td>
           <td>${numberFmt.format(row.classCount || 0)}</td>
           <td>${numberFmt.format(row.studentCount || 0)}</td>
           <td class="ideal">${numberFmt.format(row.idealSessions || 0)}</td>
@@ -1216,7 +1577,7 @@
           <td class="permit">${numberFmt.format(row.permit)}</td>
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
-          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td>${attendancePercentBadge(displayRate)}</td>
           <td class="blue">${numberFmt.format(Math.round(row.efficiency || 0))}</td>
         </tr>` : isClassAggregate ? `<tr>
           <td class="name">${classButton}</td>
@@ -1226,7 +1587,7 @@
           <td class="permit">${numberFmt.format(row.permit)}</td>
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
-          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td>${attendancePercentBadge(displayRate)}</td>
         </tr>${inlineClassBottom}` : isAggregate ? `<tr>
           <td class="name">${studentButton}</td>
           <td>${escapeHtml(row.class)}</td>
@@ -1235,7 +1596,7 @@
           <td class="permit">${numberFmt.format(row.permit)}</td>
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
-          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td>${attendancePercentBadge(displayRate)}</td>
         </tr>${inlineAbsences}` : `<tr>
           <td class="name">${studentButton}</td>
           <td>${escapeHtml(row.class)}</td>
@@ -1246,7 +1607,7 @@
           <td class="permit">${numberFmt.format(row.permit)}</td>
           <td class="violet">${numberFmt.format(row.sick)}</td>
           <td class="bad">${numberFmt.format(row.absent)}</td>
-          <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+          <td>${attendancePercentBadge(displayRate)}</td>
           ${canEditRows ? `<td>${renderAttendanceEditButton(row)}</td>` : ""}
         </tr>${inlineAbsences}${editPanel}`;
       }).join("") + (filters.kelas && isClassWeekAggregate ? renderClassBottomStudents(filters.kelas, colSpan) : "");
@@ -1260,11 +1621,45 @@
       render();
     }
 
+    function selectAttendanceStudent(encodedStudent) {
+      const student = decodeURIComponent(encodedStudent || "");
+      $("searchInput").value = student;
+      expandedAttendanceStudent = "";
+      expandedAttendanceClass = "";
+      editingAttendanceKey = "";
+      render();
+    }
+
     function toggleClassBottomStudents(encodedClass, encodedWeekKey = "") {
       const kelas = decodeURIComponent(encodedClass || "").toLowerCase();
       const weekKey = decodeURIComponent(encodedWeekKey || "");
       const key = `${kelas}|${weekKey}`;
       expandedAttendanceClass = expandedAttendanceClass === key ? "" : key;
+      render();
+    }
+
+    function selectAttendanceClass(encodedClass) {
+      const kelas = decodeURIComponent(encodedClass || "");
+      $("classSelect").value = kelas;
+      $("tableClassSelect").value = kelas;
+      expandedAttendanceClass = "";
+      updateStudentSuggestions();
+      render();
+    }
+
+    function selectAttendanceBranch(encodedBranch) {
+      const branch = decodeURIComponent(encodedBranch || "");
+      $("branchSelect").value = branch;
+      $("classSelect").value = "";
+      $("tableClassSelect").value = "";
+      $("searchInput").value = "";
+      $("tableSearch").value = "";
+      $("regionalSelect").value = "";
+      expandedAttendanceStudent = "";
+      expandedAttendanceClass = "";
+      editingAttendanceKey = "";
+      updateClassOptions();
+      updateStudentSuggestions();
       render();
     }
 
@@ -1368,9 +1763,10 @@
         <div class="inline-absence-list">
           <div class="inline-panel-title"><span>${hasClassFilter ? "Daftar siswa sesuai filter" : "5 siswa kehadiran terbawah"}</span><span class="pill">${escapeHtml(kelas)}</span></div>
           ${rows.length ? `<div class="inline-student-table"><table>
-            <thead><tr><th>Nama Siswa</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>% Hadir</th></tr></thead>
+            <thead><tr><th>Nama Siswa</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Tanpa Keterangan</th><th>% Hadir</th></tr></thead>
             <tbody>${rows.map((row) => {
-              const cls = row.attendanceRate >= 0.8 ? "good" : row.attendanceRate >= 0.6 ? "warn" : "bad";
+              const displayRate = Math.round(row.attendanceRate * 100);
+              const cls = displayRate >= 80 ? "good" : displayRate >= 60 ? "warn" : "bad";
               return `<tr>
                 <td class="name">${escapeHtml(row.student)}</td>
                 <td class="ideal">${numberFmt.format(row.idealSessions || 0)}</td>
@@ -1378,7 +1774,7 @@
                 <td class="permit">${numberFmt.format(row.permit)}</td>
                 <td class="violet">${numberFmt.format(row.sick)}</td>
                 <td class="bad">${numberFmt.format(row.absent)}</td>
-                <td class="${cls}">${Math.round(row.attendanceRate * 100)}%</td>
+                <td>${attendancePercentBadge(displayRate)}</td>
               </tr>`;
             }).join("")}</tbody>
           </table></div>` : `<div class="empty">Tidak ada data siswa pada kelas ini.</div>`}
@@ -1392,7 +1788,7 @@
         <div class="inline-absence-list">
           ${absences.length ? absences.map((record) => `<div class="absence-item">
             <div><div class="absence-date">${formatLongDate(record.date)}</div></div>
-            <span class="status-badge status-${record.status}">${record.status}</span>
+            <span class="status-badge status-${record.status}">${statusLabel(record.status)}</span>
           </div>`).join("") : `<div class="empty">Tidak ada tanggal tidak hadir pada filter ini.</div>`}
         </div>
       </td></tr>`;
@@ -1404,13 +1800,14 @@
       const noSearchFilters = { ...filters, search: "" };
       return data.records
         .filter((record) => {
+          const status = recordStatus(record);
           if (String(record.student || "").toLowerCase() !== selectedName) return false;
           if (weekKey && record.weekKey !== weekKey) return false;
           if (!weekMatches(record, noSearchFilters)) return false;
-          if (filters.status && record.status !== filters.status) return false;
-          return ["Alpa", "Izin", "Sakit"].includes(record.status) || String(record.raw || "").trim() === "0";
+          if (filters.status && status !== filters.status) return false;
+          return ["Alpa", "Izin", "Sakit"].includes(status);
         })
-        .map((record) => ({ ...record, status: String(record.raw || "").trim() === "0" ? "Alpa" : record.status }))
+        .map((record) => ({ ...record, status: recordStatus(record) }))
         .sort((a, b) => a.date.localeCompare(b.date));
     }
 
@@ -1447,33 +1844,6 @@
       return [...byClass.values()]
         .map((row) => ({ ...row, percentage: row.idealSessions ? Math.round((row.present / row.idealSessions) * 100) : 0 }))
         .sort((a, b) => compareClass(a.class, b.class));
-    }
-
-    function renderAbsences(records, filters) {
-      const exactStudent = findAttendanceStudent(filters.search);
-      $("absencePanel").hidden = !exactStudent;
-      if (!exactStudent) return;
-      const selectedName = exactStudent.name.toLowerCase();
-
-      const absences = data.records
-        .filter((record) => {
-          if (record.studentId !== exactStudent.id && String(record.student || "").toLowerCase() !== selectedName) return false;
-          if (!weekMatches(record, filters)) return false;
-          if (filters.status && record.status !== filters.status) return false;
-          return ["Alpa", "Izin", "Sakit"].includes(record.status) || String(record.raw || "").trim() === "0";
-        })
-        .map((record) => ({ ...record, status: String(record.raw || "").trim() === "0" ? "Alpa" : record.status }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-
-      $("absenceCount").textContent = `${numberFmt.format(absences.length)} tanggal`;
-      $("absenceList").innerHTML = absences.length ? absences.map((record) => `
-        <div class="absence-item">
-          <div>
-            <div class="absence-date">${formatLongDate(record.date)}</div>
-          </div>
-          <span class="status-badge status-${record.status}">${record.status}</span>
-        </div>
-      `).join("") : `<div class="empty">Tidak ada tanggal tidak hadir pada filter ini.</div>`;
     }
 
     function renderCharts(records, rows) {
@@ -1633,7 +2003,7 @@
         gradient.addColorStop(1, "rgba(251, 146, 60, 0.55)");
         return gradient;
       };
-      $("trendTitle").textContent = isSingleClassAllWeeks ? `Kehadiran ${filters.kelas} Per Week` : "Perbandingan Sesi Ideal dan Hadir untuk Semua Kelas";
+      $("trendTitle").textContent = isSingleClassAllWeeks ? `Kehadiran ${filters.kelas} Per Week` : "Perbandingan Kehadiran per Kelas";
       if (trendChart) trendChart.destroy();
       chartBox.style.height = "";
       if (isSingleClassAllWeeks) {
@@ -1812,11 +2182,18 @@
       });
     }
 
+    function attendancePercentBadge(value) {
+      const percent = Math.max(0, Math.round(Number(value) || 0));
+      const background = attendancePercentColor(percent);
+      const color = percent < 38 || percent > 88 ? "#ffffff" : "#13202f";
+      return `<span class="percent-badge" style="background:${background}; color:${color};">${percent}%</span>`;
+    }
+
     function attendancePercentColor(value) {
       const percent = Math.max(0, Math.min(100, Number(value) || 0));
-      const from = percent < 50 ? [239, 68, 68] : [248, 250, 252];
-      const to = percent < 50 ? [248, 250, 252] : [16, 185, 129];
-      const amount = percent < 50 ? percent / 50 : (percent - 50) / 50;
+      const from = percent < 75 ? [239, 68, 68] : [248, 250, 252];
+      const to = percent < 75 ? [248, 250, 252] : [16, 185, 129];
+      const amount = percent < 75 ? percent / 75 : (percent - 75) / 25;
       const channel = (index) => Math.round(from[index] + (to[index] - from[index]) * amount);
       return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
     }
@@ -2943,7 +3320,7 @@
 
     function downloadCsv() {
       const rows = filteredWeekRows(currentFilters());
-      const header = ["Nama", "Kelas", "Bulan", "Week", "Sesi Ideal", "Hadir", "Izin", "Sakit", "Alpa", "Persen Hadir"];
+      const header = ["Nama", "Kelas", "Bulan", "Week", "Sesi Ideal", "Hadir", "Izin", "Sakit", "Tanpa Keterangan", "Persen Hadir"];
       const body = rows.map((row) => [row.student, row.class, row.month, row.week, row.idealSessions || 0, row.present, row.permit, row.sick, row.absent, `${Math.round(row.attendanceRate * 100)}%`]);
       const csv = [header, ...body].map((line) => line.map(csvCell).join(",")).join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -3003,11 +3380,11 @@
             <div class="box"><div class="box-label">Siswa</div><div class="box-value">${numberFmt.format(rows.length)}</div></div>
             <div class="box"><div class="box-label">Sesi Ideal</div><div class="box-value">${numberFmt.format(idealTotal)}</div></div>
             <div class="box"><div class="box-label">Hadir</div><div class="box-value good">${numberFmt.format(totals.Hadir)}</div></div>
-            <div class="box"><div class="box-label">Alpa</div><div class="box-value bad">${numberFmt.format(totals.Alpa)}</div></div>
+            <div class="box"><div class="box-label">Tanpa Keterangan</div><div class="box-value bad">${numberFmt.format(totals.Alpa)}</div></div>
             <div class="box"><div class="box-label">% Hadir</div><div class="box-value">${idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0}%</div></div>
           </div>
           <table>
-            <thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>% Hadir</th></tr></thead>
+            <thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Tanpa Keterangan</th><th>% Hadir</th></tr></thead>
             <tbody>
               ${rows.map((row) => `<tr><td>${escapeHtml(row.student)}</td><td>${escapeHtml(row.class)}</td><td>${numberFmt.format(row.idealSessions || 0)}</td><td class="good">${numberFmt.format(row.present || 0)}</td><td class="permit">${numberFmt.format(row.permit || 0)}</td><td class="violet">${numberFmt.format(row.sick || 0)}</td><td class="bad">${numberFmt.format(row.absent || 0)}</td><td>${Math.round((row.attendanceRate || 0) * 100)}%</td></tr>`).join("")}
             </tbody>
@@ -3034,8 +3411,22 @@
 
       const rows = filteredWeekRows(filters);
       const absenceRecords = filteredRecords(filters)
-        .filter((record) => record.studentId === student.id && ["Alpa", "Izin", "Sakit"].includes(record.status))
+        .filter((record) => {
+          const status = recordStatus(record);
+          return record.studentId === student.id && ["Alpa", "Izin", "Sakit"].includes(status);
+        })
+        .map((record) => ({ ...record, status: recordStatus(record) }))
         .sort((a, b) => a.date.localeCompare(b.date));
+      const totals = countStatusesFromRows(rows);
+      const idealTotal = rows.reduce((sum, row) => sum + (row.idealSessions || 0), 0);
+      const attendancePercent = idealTotal ? Math.round((totals.Hadir / idealTotal) * 100) : 0;
+      const statusLevel = attendancePercent >= 90 ? "good" : attendancePercent >= 75 ? "warn" : "bad";
+      const statusText = statusLevel === "good" ? "Aman" : statusLevel === "warn" ? "Perlu Perhatian" : "Kritis";
+      const classAverage = student.class ? classAttendanceAverage(student.class, filters) : null;
+      const classDelta = classAverage == null ? null : attendancePercent - classAverage;
+      const latestAbsence = absenceRecords.at(-1);
+      const analysisText = studentAttendanceAnalysis({ rows, totals, idealTotal, attendancePercent, statusText, classAverage, classDelta, latestAbsence, absenceRecords });
+      const trendRows = studentTrendRows(rows, student);
 
       const title = `Rekap Kehadiran ${student.name}`;
       const printWindow = window.open("", "_blank");
@@ -3051,58 +3442,139 @@
           <meta charset="utf-8">
           <title>${escapeHtml(title)}</title>
           <style>
-            @page { size: A4 portrait; margin: 12mm; }
+            @page { size: A4 portrait; margin: 9mm; }
             * { box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; color: #13202f; margin: 0; font-size: 11px; }
-            .header { border-bottom: 3px solid #00809d; padding-bottom: 10px; margin-bottom: 14px; }
-            .pdf-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+            body { font-family: Arial, sans-serif; color: #13202f; margin: 0; font-size: 10px; background: #eef8fd; }
+            .pdf-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 3px solid #00809d; padding-bottom: 8px; margin-bottom: 10px; background: #fff; }
+            .pdf-header h1 { margin: 0; color: #007fc7; font-size: 17px; line-height: 1.2; }
+            .pdf-subtitle { margin-top: 3px; color: #64748b; font-size: 10px; font-weight: 700; }
             .pdf-logo { width: 112px; height: auto; }
-            h1 { margin: 0; font-size: 18px; line-height: 1.25; color: #007fc7; }
-            .student { margin-top: 3px; font-size: 13px; font-weight: 700; }
-            .meta { margin-top: 5px; color: #52657a; font-size: 11px; }
-            .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0 14px; }
-            .box { border: 1px solid #cfe0ec; border-radius: 7px; padding: 6px; background: #f6fbff; }
-            .box-label { color: #52657a; font-size: 11px; font-weight: 700; }
-            .box-value { margin-top: 3px; font-size: 14px; font-weight: 800; }
+            .profile { border: 1px solid #cfe0ec; border-radius: 8px; padding: 10px; background: #fff; margin-bottom: 10px; }
+            .profile-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+            .student-name { margin: 0; font-size: 15px; line-height: 1.2; color: #13202f; font-weight: 800; }
+            .meta { margin-top: 4px; color: #64748b; font-size: 10px; font-weight: 700; }
+            .status { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
+            .status.good { color: #047857; background: #ecfdf5; }
+            .status.warn { color: #b45309; background: #fffbeb; }
+            .status.bad { color: #b91c1c; background: #fef2f2; }
+            .summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 8px 0 9px; }
+            .box { border: 1px solid #cfe0ec; border-radius: 7px; padding: 6px; background: #fbfdff; min-height: 50px; }
+            .box-label { color: #52657a; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+            .box-value { margin-top: 3px; font-size: 15px; font-weight: 800; }
+            .box-note { margin-top: 2px; color: #64748b; font-size: 8px; font-weight: 700; }
+            .good-text { color: #10B981; }
+            .permit-text { color: #F58220; }
+            .violet-text { color: #7c5ce7; }
+            .bad-text { color: #ef4444; }
+            .profile-detail { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+            .detail-box { border: 1px solid #cfe0ec; border-radius: 7px; padding: 8px; background: #fbfdff; }
+            .detail-title, .analysis-title { margin: 0 0 6px; color: #52657a; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+            .week-row { display: grid; grid-template-columns: 120px 1fr 36px; gap: 8px; align-items: center; margin: 5px 0; font-weight: 400; }
+            .bar { height: 7px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+            .bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #00809d, #10B981); }
+            .absence { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid #e2edf5; padding: 6px 0; font-weight: 700; }
+            .absence:last-child { border-bottom: 0; }
+            .analysis { border: 1px solid #cfe0ec; border-radius: 7px; padding: 8px; background: #fbfdff; margin-top: 8px; }
+            .analysis p { margin: 0; line-height: 1.45; font-weight: 400; color: #334155; }
+            .analysis textarea { display: none; width: 100%; min-height: 92px; margin-top: 7px; border: 1px solid #cfe0ec; border-radius: 6px; padding: 7px; color: #13202f; font: inherit; line-height: 1.45; resize: vertical; }
+            .analysis.editing p { display: none; }
+            .analysis.editing textarea { display: block; }
+            .print-controls { display: flex; justify-content: flex-end; gap: 8px; margin: 8px 0 0; }
+            .print-controls button { border: 1px solid #cfe0ec; border-radius: 7px; padding: 7px 12px; color: #007fc7; background: #fff; font-weight: 800; cursor: pointer; }
+            .print-controls .primary { color: #fff; background: #F58220; border-color: #F58220; }
+            .table-section { border: 1px solid #cfe0ec; border-radius: 8px; overflow: hidden; background: #fff; }
+            .table-head { display: flex; justify-content: space-between; align-items: center; padding: 9px 10px; border-bottom: 1px solid #cfe0ec; }
+            .table-head h2 { margin: 0; font-size: 14px; }
             table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
             th, td { border: 1px solid #cfe0ec; padding: 4px 5px; text-align: center; }
             th { background: #e9f8ff; color: #52657a; font-weight: 800; }
             td:first-child, td:nth-child(2), th:first-child, th:nth-child(2) { text-align: left; }
-            .section { margin: 12px 0 7px; font-size: 12px; font-weight: 800; color: #007fc7; }
-            .absence { display: grid; grid-template-columns: 1fr 60px; gap: 8px; align-items: center; border: 1px solid #cfe0ec; padding: 6px 8px; margin-bottom: 5px; border-radius: 6px; background: #fbfdff; }
-            .badge { color: #fff; border-radius: 999px; padding: 3px 7px; text-align: center; font-weight: 700; font-size: 11px; }
+            .badge { color: #fff; border-radius: 999px; padding: 4px 8px; text-align: center; font-weight: 800; font-size: 10px; }
             .Alpa { background: #ef4444; }
             .Izin { background: #F58220; }
             .Sakit { background: #7c5ce7; }
+            @media print {
+              .print-controls, .analysis textarea { display: none !important; }
+              .analysis p { display: block !important; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="pdf-top">
+          <div class="pdf-header">
+            <div>
+              <h1>${escapeHtml(title)}</h1>
+              <div class="pdf-subtitle">Monitoring Kesiswaan Sulsel Raya · Dicetak: ${new Date().toLocaleDateString("id-ID")}</div>
+            </div>
+            <img class="pdf-logo" src="ruangguru-logo.svg" alt="Ruangguru">
+          </div>
+          <div class="profile">
+            <div class="profile-head">
               <div>
-                <h1>Rekap Kehadiran</h1>
-                <div class="student">${escapeHtml(student.name)}</div>
-                <div class="meta">Kelas: ${escapeHtml(student.class)} | Dicetak: ${new Date().toLocaleDateString("id-ID")}</div>
+                <div class="student-name">${escapeHtml(student.name)}</div>
+                <div class="meta">${escapeHtml(student.class || "-")} · ${escapeHtml(student.branch || "-")} · ${periodText(filters)}</div>
               </div>
-              <img class="pdf-logo" src="ruangguru-logo.svg" alt="Ruangguru">
+              <div class="status ${statusLevel}">${statusText}</div>
+            </div>
+            <div class="summary">
+              <div class="box"><div class="box-label">Sesi Ideal</div><div class="box-value">${numberFmt.format(idealTotal)}</div><div class="box-note">sesi wajib hadir</div></div>
+              <div class="box"><div class="box-label">Hadir</div><div class="box-value good-text">${numberFmt.format(totals.Hadir)}</div><div class="box-note">${attendancePercent}% dari sesi ideal</div></div>
+              <div class="box"><div class="box-label">Izin</div><div class="box-value permit-text">${numberFmt.format(totals.Izin)}</div><div class="box-note">hari izin</div></div>
+              <div class="box"><div class="box-label">Sakit</div><div class="box-value violet-text">${numberFmt.format(totals.Sakit)}</div><div class="box-note">hari sakit</div></div>
+              <div class="box"><div class="box-label">Tanpa Keterangan</div><div class="box-value bad-text">${numberFmt.format(totals.Alpa)}</div><div class="box-note">tanpa keterangan</div></div>
+            </div>
+            <div class="profile-detail">
+              <div class="detail-box">
+                <div class="detail-title">Tren Per Week</div>
+                ${trendRows.length ? trendRows.map((row) => {
+                  const percent = row.idealSessions ? Math.round((row.present || 0) / row.idealSessions * 100) : 0;
+                  return `<div class="week-row"><span>${escapeHtml(studentTrendWeekLabel(row))}</span><div class="bar"><span style="width:${Math.max(0, Math.min(100, percent))}%"></span></div><strong>${percent}%</strong></div>`;
+                }).join("") : "<div>Belum ada data week pada filter ini.</div>"}
+              </div>
+              <div class="detail-box">
+                <div class="detail-title">Tanggal Tidak Hadir</div>
+                ${absenceRecords.length ? absenceRecords.slice(-6).map((record) => `<div class="absence"><strong>${formatLongDate(record.date)}</strong><span class="badge ${record.status}">${statusLabel(record.status)}</span></div>`).join("") : "<div>Tidak ada tanggal tidak hadir pada filter ini.</div>"}
+              </div>
+            </div>
+            <div class="analysis">
+              <div class="analysis-title">Catatan Wali Kelas</div>
+              <p id="printAnalysisText">${escapeHtml(analysisText)}</p>
+              <textarea id="printAnalysisInput">${escapeHtml(analysisText)}</textarea>
+              <div class="print-controls">
+                <button type="button" id="editAnalysisBtn">Edit Catatan</button>
+                <button type="button" class="primary" id="printPdfBtn">Print PDF</button>
+              </div>
             </div>
           </div>
-          <div class="summary">
-            <div class="box"><div class="box-label">Sesi Ideal</div><div class="box-value">${numberFmt.format(rows.reduce((sum, row) => sum + (row.idealSessions || 0), 0))}</div></div>
-            <div class="box"><div class="box-label">Hadir</div><div class="box-value">${numberFmt.format(rows.reduce((sum, row) => sum + row.present, 0))}</div></div>
-            <div class="box"><div class="box-label">Izin</div><div class="box-value">${numberFmt.format(rows.reduce((sum, row) => sum + row.permit, 0))}</div></div>
-            <div class="box"><div class="box-label">Sakit</div><div class="box-value">${numberFmt.format(rows.reduce((sum, row) => sum + row.sick, 0))}</div></div>
-            <div class="box"><div class="box-label">Alpa</div><div class="box-value">${numberFmt.format(rows.reduce((sum, row) => sum + row.absent, 0))}</div></div>
+          <div class="table-section">
+            <div class="table-head"><h2>Detail Setiap Week</h2><span>Dicetak: ${new Date().toLocaleDateString("id-ID")}</span></div>
+            <table>
+              <thead><tr><th>Bulan</th><th>Week</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Tanpa Keterangan</th><th>% Hadir</th></tr></thead>
+              <tbody>
+                ${rows.map((row) => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.week)}</td><td>${numberFmt.format(row.idealSessions || 0)}</td><td>${numberFmt.format(row.present)}</td><td>${numberFmt.format(row.permit)}</td><td>${numberFmt.format(row.sick)}</td><td>${numberFmt.format(row.absent)}</td><td>${Math.round(row.attendanceRate * 100)}%</td></tr>`).join("")}
+              </tbody>
+            </table>
           </div>
-          <table>
-            <thead><tr><th>Bulan</th><th>Week</th><th>Sesi Ideal</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>% Hadir</th></tr></thead>
-            <tbody>
-              ${rows.map((row) => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.week)}</td><td>${numberFmt.format(row.idealSessions || 0)}</td><td>${numberFmt.format(row.present)}</td><td>${numberFmt.format(row.permit)}</td><td>${numberFmt.format(row.sick)}</td><td>${numberFmt.format(row.absent)}</td><td>${Math.round(row.attendanceRate * 100)}%</td></tr>`).join("")}
-            </tbody>
-          </table>
-          <div class="section">Tanggal Tidak Hadir</div>
-          ${absenceRecords.length ? absenceRecords.map((record) => `<div class="absence"><div><strong>${formatLongDate(record.date)}</strong></div><div class="badge ${record.status}">${record.status}</div></div>`).join("") : "<div>Tidak ada tanggal tidak hadir pada filter ini.</div>"}
-          <script>window.onload = () => { window.print(); };<\/script>
+          <script>
+            const analysisBox = document.querySelector(".analysis");
+            const analysisText = document.getElementById("printAnalysisText");
+            const analysisInput = document.getElementById("printAnalysisInput");
+            document.getElementById("editAnalysisBtn").addEventListener("click", () => {
+              analysisBox.classList.toggle("editing");
+              if (analysisBox.classList.contains("editing")) {
+                analysisInput.focus();
+              } else {
+                analysisText.textContent = analysisInput.value;
+              }
+            });
+            analysisInput.addEventListener("input", () => {
+              analysisText.textContent = analysisInput.value;
+            });
+            document.getElementById("printPdfBtn").addEventListener("click", () => {
+              analysisText.textContent = analysisInput.value;
+              analysisBox.classList.remove("editing");
+              window.print();
+            });
+          <\/script>
         </body>
         </html>
       `);
@@ -3367,9 +3839,9 @@
     function statusKind(value) {
       const text = String(value ?? "").trim();
       if (!text) return "";
-      const lower = text.toLowerCase();
-      if (lower === "izin") return "Izin";
-      if (lower === "sakit") return "Sakit";
+      const lower = text.toLowerCase().replace(/[^a-z]/g, "");
+      if (["izin", "ijin", "i"].includes(lower)) return "Izin";
+      if (["sakit", "s"].includes(lower)) return "Sakit";
       if (["alpa", "alpha"].includes(lower)) return "Alpa";
       if (text.match(/^-?\d+([,.]\d+)?$/)) {
         return toNumber(text) > 0 ? "Hadir" : "Alpa";
