@@ -233,16 +233,25 @@
     #drillRowsWrap td.metric-blank { color: #7c5ce7; background: #f7f5ff; }
     #drillRowsWrap td.metric-total { color: #13202f; background: #f8fafc; }
     #drillRowsWrap td.metric-percent { color: #F58220; background: #fff7ed; }
-    .student-drill-insight { display: grid; grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.6fr); gap: 10px; padding: 0 16px 12px; }
+    .table-head-tip { display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; width: 17px; height: 17px; border-radius: 999px; color: #007fc7; background: #dff3fd; font-size: 11px; font-weight: 950; text-transform: none; vertical-align: middle; cursor: help; }
+    .drill-summary-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr); gap: 12px; align-items: stretch; padding: 14px; }
+    .drill-summary-body .detail-grid { padding: 0; }
+    .drill-summary-body:has(.student-drill-insight[hidden]) { grid-template-columns: 1fr; }
+    .drill-summary-body:has(.student-drill-insight:not(.inactive-insight):not([hidden])) { grid-template-columns: 1fr; }
+    .drill-summary-body .student-drill-insight[hidden] + .detail-grid,
+    .drill-summary-body .student-drill-insight[hidden] { display: none !important; }
+    .student-drill-insight { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.6fr); gap: 10px; min-width: 0; }
+    .student-drill-insight.inactive-insight { grid-column: 2; grid-row: 1; grid-template-columns: 1fr; }
     .student-drill-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fff; }
     .student-drill-card.primary { display: flex; flex-direction: column; justify-content: center; min-height: 76px; background: #f5fbff; }
     .student-drill-card.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 7px; }
     .student-drill-metric { min-width: 0; min-height: 76px; display: grid; grid-template-rows: auto auto auto; align-content: center; padding: 8px 10px; border-radius: 8px; background: #f8fbfd; }
-    .inactive-insight { grid-template-columns: minmax(280px, 0.65fr) minmax(0, 1.35fr); align-items: stretch; padding-bottom: 8px; }
+    .inactive-insight { grid-template-columns: minmax(280px, 0.65fr) minmax(0, 1.35fr); align-items: stretch; }
     .inactive-insight .student-drill-card.primary { min-height: 78px; padding: 10px 14px; }
     .inactive-insight .student-drill-card.metrics { grid-template-columns: 1fr; align-content: start; min-height: 78px; padding: 6px; }
     .inactive-insight .student-drill-metric { min-height: 0; padding: 6px 8px; }
     .inactive-priority { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .drill-summary-body .inactive-priority { grid-template-columns: 1fr; }
     .inactive-class-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 5px 8px; border-radius: 7px; background: #f8fbfd; }
     .inactive-class-name { min-width: 0; color: var(--ink); font-size: 12px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inactive-class-meta { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.05; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -269,6 +278,7 @@
     .student-subject-detail th:first-child, .student-subject-detail td:first-child, .student-subject-detail th:nth-child(2), .student-subject-detail td:nth-child(2) { text-align: left; }
     .leaderboard-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; padding: 14px; align-items: stretch; }
     .leaderboard-grid:has(.class-leaderboard) { grid-template-columns: 1fr; }
+    .leaderboard-grid:has(.student-top5-leaderboard) { grid-template-columns: 1fr; }
     .leaderboard-card { min-height: 236px; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; overflow: hidden; display: grid; grid-template-rows: auto repeat(3, minmax(58px, 1fr)); }
     .leaderboard-grade { padding: 10px 12px; font-size: 16px; font-weight: 900; color: var(--blue-dark); background: #e9f8ff; border-bottom: 1px solid var(--line); }
     .leaderboard-item { min-height: 58px; display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; align-items: center; padding: 9px 10px; border-bottom: 1px solid var(--line); }
@@ -286,6 +296,18 @@
     .class-leaderboard { width: 100%; min-height: 0; border: 0; background: transparent; display: grid; grid-template-rows: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; overflow: visible; }
     .class-leaderboard .leaderboard-grade { display: none; }
     .class-leaderboard .leaderboard-item { position: relative; min-height: 112px; display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 4px 16px; align-content: center; align-items: center; padding: 16px 20px; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; overflow: hidden; }
+    .student-top5-leaderboard .leaderboard-item { grid-template-columns: 58px minmax(0, 1fr) minmax(86px, auto); min-height: 86px; }
+    .student-top5-leaderboard .leaderboard-medal { width: 54px; height: 54px; font-size: 40px; }
+    .student-top5-leaderboard .leaderboard-name { font-size: 17px; }
+    .student-top5-leaderboard .leaderboard-score { font-size: 28px; }
+    .student-top5-leaderboard.student-top5-row { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .student-top5-row .leaderboard-item { min-height: 156px; grid-template-columns: 42px minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 8px 10px; padding: 14px 12px; align-content: start; }
+    .student-top5-row .leaderboard-medal { grid-column: 1; grid-row: 1 / 3; width: 42px; height: 42px; font-size: 32px; }
+    .student-top5-row .leaderboard-info { grid-column: 2; grid-row: 1 / 3; align-self: start; }
+    .student-top5-row .leaderboard-name { padding-right: 34px; font-size: 15px; line-height: 1.12; }
+    .student-top5-row .leaderboard-meta { font-size: 11px; line-height: 1.2; }
+    .student-top5-row .leaderboard-score { grid-column: 1 / -1; grid-row: 3; justify-self: end; align-self: end; font-size: 28px; }
+    .student-top5-row .leaderboard-rank { top: 10px; right: 10px; }
     .class-leaderboard .leaderboard-item:last-child { border-right: 1px solid var(--line); }
     .class-leaderboard .leaderboard-item::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: currentColor; }
     .class-leaderboard .leaderboard-rank { display: inline-flex; align-items: center; justify-content: center; position: absolute; top: 12px; right: 12px; min-width: 32px; height: 26px; padding: 0 9px; border-radius: 999px; background: rgba(255,255,255,0.76); color: inherit; font-size: 13px; font-weight: 900; }
@@ -297,6 +319,7 @@
     .leaderboard-class-rank-1 { color: #d97706; border-color: #f59e0b !important; background: #fff8e6 !important; }
     .leaderboard-class-rank-2 { color: #64748b; border-color: #94a3b8 !important; background: #f8fafc !important; }
     .leaderboard-class-rank-3 { color: #b45309; border-color: #c08457 !important; background: #fff1e7 !important; }
+    .leaderboard-class-rank-4, .leaderboard-class-rank-5 { color: #0f1f33; border-color: #cfe0ec !important; background: #fbfdff !important; }
     .class-leaderboard .empty { grid-column: 1 / -1; display: flex; align-items: center; padding: 16px; }
     .detail-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 16px; }
     .detail-item { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fbfdff; }
@@ -336,9 +359,13 @@
       .rg-logo { width: 116px; }
       .filters, .stats { grid-template-columns: 1fr; }
       .leaderboard-grid { grid-template-columns: 1fr; }
+      .student-top5-leaderboard.student-top5-row { grid-template-columns: 1fr; }
       .class-leaderboard { grid-template-columns: 1fr; }
+      .drill-summary-body { grid-template-columns: 1fr; padding: 10px; }
+      .student-drill-insight.inactive-insight { grid-column: auto; grid-row: auto; }
       .detail-grid { grid-template-columns: 1fr 1fr; }
       .student-drill-insight { grid-template-columns: 1fr; }
+      .drill-summary-body .inactive-priority { grid-template-columns: 1fr; }
       .student-drill-card.metrics { grid-template-columns: 1fr 1fr; }
       .student-drill-charts { grid-template-columns: 1fr; }
       .date-grid { padding: 10px; }
@@ -490,15 +517,17 @@
           <h2 id="drillDetailTitle">Detail Drill</h2>
           <span class="pill" id="drillTargetNote">Target</span>
         </div>
-        <div class="detail-grid" id="drillSummaryGrid">
-          <div class="detail-item"><div class="detail-label" id="drillTargetLabel">Target</div><div class="detail-value ideal" id="drillTarget">0</div></div>
-          <div class="detail-item"><div class="detail-label" id="drillCorrectLabel">Benar</div><div class="detail-value good" id="drillCorrect">0</div></div>
-          <div class="detail-item"><div class="detail-label" id="drillWrongLabel">Salah</div><div class="detail-value bad" id="drillWrong">0</div></div>
-          <div class="detail-item"><div class="detail-label" id="drillBlankLabel">Blank</div><div class="detail-value violet" id="drillBlank">0</div></div>
-          <div class="detail-item"><div class="detail-label" id="drillTotalLabel">Total</div><div class="detail-value" id="drillTotal">0</div></div>
-          <div class="detail-item"><div class="detail-label" id="drillPercentLabel">% Ach</div><div class="detail-value permit" id="drillPercent">0%</div></div>
+        <div class="drill-summary-body">
+          <div class="detail-grid" id="drillSummaryGrid">
+            <div class="detail-item"><div class="detail-label" id="drillTargetLabel">Target</div><div class="detail-value ideal" id="drillTarget">0</div></div>
+            <div class="detail-item"><div class="detail-label" id="drillCorrectLabel">Benar</div><div class="detail-value good" id="drillCorrect">0</div></div>
+            <div class="detail-item"><div class="detail-label" id="drillWrongLabel">Salah</div><div class="detail-value bad" id="drillWrong">0</div></div>
+            <div class="detail-item"><div class="detail-label" id="drillBlankLabel">Blank</div><div class="detail-value violet" id="drillBlank">0</div></div>
+            <div class="detail-item"><div class="detail-label" id="drillTotalLabel">Total</div><div class="detail-value" id="drillTotal">0</div></div>
+            <div class="detail-item"><div class="detail-label" id="drillPercentLabel">% Ach</div><div class="detail-value permit" id="drillPercent">0%</div></div>
+          </div>
+          <div class="student-drill-insight" id="studentDrillInsight" hidden></div>
         </div>
-        <div class="student-drill-insight" id="studentDrillInsight" hidden></div>
       </div>
       <div class="panel" id="drillDatePanel">
         <div class="panel-head">
@@ -552,7 +581,7 @@
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
     const LIVE_DATA_SCHEMA_VERSION = 11;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
-    const LIVE_DRILL_SCHEMA_VERSION = 7;
+    const LIVE_DRILL_SCHEMA_VERSION = 8;
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
@@ -580,6 +609,14 @@
     let selectedDrillGrade = "12 SMA";
     let inactiveDrillStatusFilter = "";
     let byId = new Map();
+    let studentByName = new Map();
+    let studentsByName = new Map();
+    let studentByEmail = new Map();
+    let studentBySerial = new Map();
+    let drillStartDateByName = new Map();
+    let drillRecordByExactKey = new Map();
+    let drillRecordByBranchName = new Map();
+    let drillRecordByClassName = new Map();
     let classes = [];
     let branches = [];
     let months = [];
@@ -852,6 +889,28 @@
 
     function rebuildIndexes() {
       byId = new Map(data.students.map((student) => [student.id, student]));
+      studentByName = new Map();
+      studentsByName = new Map();
+      studentByEmail = new Map();
+      studentBySerial = new Map();
+      drillStartDateByName = new Map();
+      drillRecordByExactKey = new Map();
+      drillRecordByBranchName = new Map();
+      drillRecordByClassName = new Map();
+      data.students.forEach((student) => {
+        const nameKey = normalizeLookup(student.name);
+        if (!studentByName.has(nameKey)) studentByName.set(nameKey, student);
+        if (!studentsByName.has(nameKey)) studentsByName.set(nameKey, []);
+        studentsByName.get(nameKey).push(student);
+        const emailKey = normalizeLookup(student.email);
+        if (emailKey && !studentByEmail.has(emailKey)) studentByEmail.set(emailKey, student);
+        const serialKey = normalizeLookup(student.serial || student.userSerial || student.user);
+        if (serialKey && !studentBySerial.has(serialKey)) studentBySerial.set(serialKey, student);
+        drillStartDateByName.set(nameKey, computeStudentDrillStartDate(student));
+        drillRecordByExactKey.set(drillStudentRecordKey(student.branch, student.class, student.name), student);
+        drillRecordByBranchName.set(drillStudentRecordKey(student.branch, "", student.name), student);
+        drillRecordByClassName.set(drillStudentRecordKey("", student.class, student.name), student);
+      });
       classes = [...new Set(data.students.map((student) => student.class).filter(Boolean))].sort(compareClass);
       branches = [...new Set(data.students.map((student) => student.branch).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
       months = [...new Set(data.weeks.map((week) => week.month).filter(Boolean))];
@@ -2349,7 +2408,10 @@
       const sheetName = drillSheetNameForBranch(branch);
       if (!sheetName) return [];
       try {
-        return await loadSheetRowsByName(sheetName);
+        return (await loadSheetRowsByName(sheetName)).map((row) => {
+          row.__sheetBranch = branch;
+          return row;
+        });
       } catch (error) {
         console.warn(`Raw Drill ${sheetName} gagal dimuat:`, error);
         return [];
@@ -2358,6 +2420,12 @@
 
     async function loadDrillData(force = false) {
       const scope = drillScope();
+      if (!force) {
+        drillLoaded = true;
+        drillLoadedScope = scope;
+        scheduleDrillRender();
+        return;
+      }
       if (drillLoadPromise) return drillLoadPromise;
       if (drillLoaded && !force && drillLoadedScope === scope) {
         scheduleDrillRender();
@@ -2427,7 +2495,7 @@
         const student = studentRecord?.name || rawStudent;
         const attendanceStudent = studentRecord ? studentFromEmail(studentRecord.email) || studentFromName(studentRecord.name) : null;
         const studentClass = attendanceStudent?.class || normalizeDrillClass(valueAt(row, classIndex)) || studentRecord?.class;
-        const branch = isValidBranch(studentRecord?.branch) ? studentRecord.branch : valueAt(row, branchIndex);
+        const branch = isValidBranch(studentRecord?.branch) ? studentRecord.branch : row.__sheetBranch || valueAt(row, branchIndex);
         const rawDate = valueAt(row, dateIndex) || valueAt(row, 0);
         if (isInvalidSheetValue(student) || isInvalidSheetValue(studentClass) || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
         if (isInvalidSheetValue(rawDate) || !normalizeDrillDate(rawDate).match(/^\d{4}-\d{2}-\d{2}$/)) return null;
@@ -2744,15 +2812,24 @@
 
     function renderInactiveDrillDetail(rows, dates) {
       const selectedBranch = $("branchSelect").value;
-      const totalActiveStudents = data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch)).length;
       const selectedRows = rows.filter((row) => dates.includes(row.date));
+      if (!selectedBranch) {
+        $("drillSummaryPanel").hidden = true;
+        $("drillDetailPanel").hidden = false;
+        $("drillRowsWrap").hidden = false;
+        $("studentDrillInsight").hidden = true;
+        $("studentDrillInsight").innerHTML = "";
+        renderDrillRows(summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, "inactiveBranch");
+        return;
+      }
+      const totalActiveStudents = data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch)).length;
       const displayRows = inactiveDrillRows(selectedRows, dates);
       const notStarted = displayRows.filter((row) => row.status.label === "Belum Mulai").length;
       const lowActive = displayRows.filter((row) => row.status.label === "Aktif Rendah").length;
       const needPush = displayRows.filter((row) => row.status.label === "Perlu Didorong").length;
       const needMaintain = displayRows.filter((row) => row.status.label === "Perlu Dijaga").length;
       const followUpPercent = totalActiveStudents ? Math.round((displayRows.length / totalActiveStudents) * 100) : 0;
-      $("drillSummaryPanel").hidden = false;
+      $("drillSummaryPanel").hidden = !selectedBranch;
       $("drillDetailPanel").hidden = false;
       $("drillRowsWrap").hidden = false;
       $("studentDrillInsight").hidden = true;
@@ -2773,11 +2850,11 @@
       $("drillBlank").textContent = numberFmt.format(needPush);
       $("drillTotal").textContent = numberFmt.format(needMaintain);
       $("drillPercent").textContent = `${followUpPercent}%`;
-      renderInactiveDrillInsight(displayRows, totalActiveStudents);
+      if (selectedBranch) renderInactiveDrillInsight(displayRows, totalActiveStudents);
       const filteredRows = inactiveDrillStatusFilter
         ? displayRows.filter((row) => row.status.label === inactiveDrillStatusFilter)
         : displayRows;
-      renderDrillRows(filteredRows, selectedRows, "inactive");
+      renderDrillRows(selectedBranch ? filteredRows : summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, selectedBranch ? "inactive" : "inactiveBranch");
     }
 
     function renderInactiveDrillInsight(displayRows, totalActiveStudents) {
@@ -2813,6 +2890,64 @@
         .filter((row) => row.followUp > 0)
         .map((row) => ({ ...row, percent: row.students ? Math.round((row.followUp / row.students) * 100) : 0 }))
         .sort((a, b) => b.followUp - a.followUp || b.percent - a.percent || compareClass(a.class, b.class));
+    }
+
+    function summarizeInactiveRowsByBranch(selectedRows = [], dates = []) {
+      const activeTargetStudents = data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class));
+      const targetDates = dates?.length ? dates : classTargetDateRange("");
+      const participationTotalByStudent = new Map();
+      const drillCorrectByStudent = new Map();
+      const actualDatesByStudent = new Map();
+      const studentDrillKey = (branch, student) => `${normalizeLookup(branch)}|${normalizeLookup(student)}`;
+      drillData.forEach((row) => {
+        if (!hasDrillTarget(row.class)) return;
+        const key = studentDrillKey(row.branch, row.student);
+        participationTotalByStudent.set(key, (participationTotalByStudent.get(key) || 0) + (row.total || 0));
+      });
+      selectedRows.forEach((row) => {
+        const key = studentDrillKey(row.branch, row.student);
+        drillCorrectByStudent.set(key, (drillCorrectByStudent.get(key) || 0) + (row.correct || 0));
+        if (!actualDatesByStudent.has(key)) actualDatesByStudent.set(key, new Set());
+        if (row.date) actualDatesByStudent.get(key).add(row.date);
+      });
+      const grouped = new Map();
+      activeTargetStudents.forEach((student) => {
+          const branch = student.branch || "-";
+          if (!grouped.has(branch)) {
+            grouped.set(branch, { branch, classes: new Map() });
+          }
+          const item = grouped.get(branch);
+          if (!item.classes.has(student.class)) item.classes.set(student.class, { students: 0, drillStudents: 0, correct: 0, target: 0 });
+          const classItem = item.classes.get(student.class);
+          const key = studentDrillKey(student.branch, student.name);
+          const total = participationTotalByStudent.get(key) || 0;
+          classItem.students += 1;
+          classItem.correct += drillCorrectByStudent.get(key) || 0;
+          classItem.target += drillTarget(student.class) * countStudentTargetDates(student.name, targetDates, actualDatesByStudent.get(key) || new Set());
+          if (total > 0) classItem.drillStudents += 1;
+        });
+      return [...grouped.values()]
+        .filter((row) => row.branch && row.branch !== "-")
+        .map((row) => {
+          let lowActiveClasses = 0;
+          let needPushClasses = 0;
+          let notStartedClasses = 0;
+          row.classes.forEach((item) => {
+            const drillStudentRate = item.students ? (item.drillStudents / item.students) * 100 : 0;
+            const targetPercent = item.target ? (item.correct / item.target) * 100 : 0;
+            if (item.drillStudents === 0) notStartedClasses += 1;
+            else if (drillStudentRate < 60) lowActiveClasses += 1;
+            else if (targetPercent < 60) needPushClasses += 1;
+          });
+          return {
+            branch: row.branch,
+            targetClasses: row.classes.size,
+            lowActiveClasses,
+            needPushClasses,
+            notStartedClasses
+          };
+        })
+        .sort((a, b) => a.branch.localeCompare(b.branch, "id"));
     }
 
     function inactiveMainInsight(rows, totalActiveStudents) {
@@ -3157,6 +3292,24 @@
     }
 
     function renderDrillRows(displayRows, selectedRows, mode = "") {
+      if (mode === "inactiveBranch") {
+        const headers = [
+          { label: "Nama Cabang", info: "" },
+          { label: "#Kelas Target Drill", info: "Kelas aktif dengan target drill: 6-12, SNBT, atau Kedinasan." },
+          { label: "#Kelas Aktif Rendah", info: "Masuk kategori jika jumlah siswa yang mengerjakan drill di kelas tersebut di bawah 60%." },
+          { label: "#Kelas Perlu Didorong", info: "Masuk kategori jika siswa aktif drill di kelas tersebut di atas atau sama dengan 60%, tapi % target kelas masih di bawah 60%." },
+          { label: "#Kelas Belum Mulai", info: "Masuk kategori jika 0 siswa di kelas tersebut mengerjakan drill." }
+        ];
+        $("drillRowsHead").innerHTML = `<tr>${headers.map((header) => `<th title="${escapeHtml(header.info)}">${escapeHtml(header.label)}${header.info ? `<span class="table-head-tip" title="${escapeHtml(header.info)}">i</span>` : ""}</th>`).join("")}</tr>`;
+        $("drillRows").innerHTML = displayRows.length ? displayRows.map((row) => `<tr>
+          <td class="name">${escapeHtml(row.branch)}</td>
+          <td class="metric metric-target">${numberFmt.format(row.targetClasses)}</td>
+          <td class="metric metric-wrong">${numberFmt.format(row.lowActiveClasses)}</td>
+          <td class="metric metric-percent">${numberFmt.format(row.needPushClasses)}</td>
+          <td class="metric metric-total">${numberFmt.format(row.notStartedClasses)}</td>
+        </tr>`).join("") : `<tr><td colspan="${headers.length}" class="empty">Tidak ada data cabang pada periode ini.</td></tr>`;
+        return;
+      }
       if (mode === "inactive") {
         const headers = ["Nama", "Kelas", "Target", "Total", "%Ach", "Aktif", "Kosong", "Status", "Alasan"];
         $("drillRowsHead").innerHTML = `<tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>`;
@@ -3305,8 +3458,19 @@
 
     function renderDrillLeaderboard(rows, dates) {
       $("drillLeaderboardPanel").hidden = false;
+      const selectedBranch = $("branchSelect").value;
+      const selectedMonth = $("drillMonthSelect").value;
+      const selectedWeek = $("drillWeekSelect").value;
+      const leaderboardTargetDates = leaderboardVisibleTargetDates(selectedMonth, selectedWeek);
       const dateSet = new Set(dates);
-      const filteredRows = rows.filter((row) => !dateSet.size || dateSet.has(row.date));
+      const filteredRows = selectedBranch
+        ? rows.filter((row) => !dateSet.size || dateSet.has(row.date))
+        : (drillFallbackData.length ? drillFallbackData : rows).filter((row) => {
+            if (!hasDrillTarget(row.class)) return false;
+            if (selectedMonth && row.month !== selectedMonth) return false;
+            if (selectedWeek && row.week !== selectedWeek) return false;
+            return true;
+          });
       if (drillMode === "class") {
         $("drillGradeTabs").hidden = true;
         renderClassLeaderboard(filteredRows, dates);
@@ -3314,12 +3478,13 @@
       }
       const grouped = new Map();
       filteredRows.forEach((row) => {
-        const student = findSelectedDrillStudent(row.student.toLowerCase()) || { name: row.student, class: row.class };
+        const student = studentRecordForDrillRow(row) || { name: row.student, class: row.class, branch: row.branch || "" };
         const grade = gradeFromClass(student.class || row.class);
         if (!grade) return;
-        const key = `${grade}|${row.branch || ""}|${student.name.toLowerCase()}`;
+        const branch = student.branch || row.branch || "";
+        const key = `${grade}|${branch}|${student.name.toLowerCase()}`;
         if (!grouped.has(key)) {
-          grouped.set(key, { grade, student: student.name, class: student.class || row.class, branch: row.branch || "", correct: 0, target: 0, total: 0, dates: new Set(), rankKey: key });
+          grouped.set(key, { grade, student: student.name, class: student.class || row.class, branch, correct: 0, target: 0, total: 0, dates: new Set(), rankKey: key });
         }
         const item = grouped.get(key);
         item.correct += row.correct;
@@ -3327,7 +3492,7 @@
         item.dates.add(row.date);
       });
       grouped.forEach((item) => {
-        const shownDates = countStudentTargetDates(item.student, dates, item.dates);
+        const shownDates = countStudentTargetDates(item.student, leaderboardTargetDates, item.dates);
         item.target = drillTarget(item.class) * shownDates;
         item.percentExact = item.target ? (item.correct / item.target) * 100 : 0;
         item.percent = Math.round(item.percentExact);
@@ -3337,7 +3502,24 @@
         .filter((item) => item.grade === selectedDrillGrade)
         .sort((a, b) => b.percentExact - a.percentExact || b.correct - a.correct || a.student.localeCompare(b.student, "id"))
         .slice(0, 3);
-      renderRankLeaderboard(leaders, "student");
+      renderRankLeaderboard(leaders);
+    }
+
+    function leaderboardVisibleTargetDates(month, week) {
+      if (week) return drillWeekRange(month, week);
+      if (month) return drillVisibleDates(month, "", []);
+      return classTargetDateRange("");
+    }
+
+    function studentRecordForDrillRow(row) {
+      return drillRecordByExactKey.get(drillStudentRecordKey(row.branch, row.class, row.student))
+        || drillRecordByBranchName.get(drillStudentRecordKey(row.branch, "", row.student))
+        || drillRecordByClassName.get(drillStudentRecordKey("", row.class, row.student))
+        || null;
+    }
+
+    function drillStudentRecordKey(branch, kelas, studentName) {
+      return `${normalizeLookup(branch)}|${normalizeLookup(kelas)}|${normalizeLookup(studentName)}`;
     }
 
     function renderStudentGradeTabs(availableGrades = []) {
@@ -3350,13 +3532,13 @@
       $("drillGradeTabs").innerHTML = grades.map((grade) => `<button class="grade-tab ${grade === selectedDrillGrade ? "active" : ""}" data-drill-grade="${escapeHtml(grade)}">${escapeHtml(grade)}</button>`).join("");
     }
 
-    function renderRankLeaderboard(leaders) {
-      const medals = ["🥇", "🥈", "🥉"];
-      $("drillLeaderboardGrid").innerHTML = `<div class="leaderboard-card class-leaderboard">
+    function renderRankLeaderboard(leaders, mode = "") {
+      const medals = ["🥇", "🥈", "🥉", "#4", "#5"];
+      $("drillLeaderboardGrid").innerHTML = `<div class="leaderboard-card class-leaderboard ${mode === "studentTop5" ? "student-top5-leaderboard student-top5-row" : ""}">
         ${leaders.length ? leaders.map((item, index) => `<div class="leaderboard-item leaderboard-class-rank-${index + 1}">
           <span class="leaderboard-rank">#${index + 1}</span>
-          <div class="leaderboard-medal" aria-label="Medali peringkat ${index + 1}">${medals[index]}</div>
-          <div class="leaderboard-info"><div class="leaderboard-name">${escapeHtml(item.student || item.class)}</div><div class="leaderboard-meta">${escapeHtml(item.class || "-")}</div></div>
+          <div class="leaderboard-medal" aria-label="Peringkat ${index + 1}">${medals[index]}</div>
+          <div class="leaderboard-info"><div class="leaderboard-name">${escapeHtml(item.student || item.class)}</div><div class="leaderboard-meta">${escapeHtml([item.class || "-", mode === "studentTop5" ? item.branch : ""].filter(Boolean).join(" | "))}</div></div>
           <div class="leaderboard-score score-${index + 1}">${item.percent}%</div>
         </div>`).join("") : `<div class="empty">Belum ada data.</div>`}
       </div>`;
@@ -3719,20 +3901,15 @@
     }
 
     function studentFromName(studentName) {
-      const search = String(studentName || "").trim().toLowerCase();
-      return data.students.find((item) => item.name.toLowerCase() === search) || null;
+      return studentByName.get(normalizeLookup(studentName)) || null;
     }
 
     function studentFromEmail(email) {
-      const search = String(email || "").trim().toLowerCase();
-      if (!search) return null;
-      return data.students.find((item) => String(item.email || "").trim().toLowerCase() === search) || null;
+      return studentByEmail.get(normalizeLookup(email)) || null;
     }
 
     function studentFromSerial(serial) {
-      const search = String(serial || "").trim().toLowerCase();
-      if (!search) return null;
-      return data.students.find((item) => String(item.serial || item.userSerial || item.user || "").trim().toLowerCase() === search) || null;
+      return studentBySerial.get(normalizeLookup(serial)) || null;
     }
 
     function normalizeDrillClass(value) {
@@ -3800,15 +3977,11 @@
     }
 
     function studentDrillStartDate(studentName) {
-      const search = String(studentName || "").trim().toLowerCase();
-      const attendanceStudents = [
-        ...(data.students || []),
-        ...((window.ATTENDANCE_DATA?.students) || [])
-      ];
-      const student = attendanceStudents.find((item) => item.paidDate && item.name.toLowerCase() === search)
-        || attendanceStudents.find((item) => item.paidDate && (item.name.toLowerCase().includes(search) || search.includes(item.name.toLowerCase())))
-        || attendanceStudents.find((item) => item.name.toLowerCase() === search)
-        || attendanceStudents.find((item) => item.name.toLowerCase().includes(search) || search.includes(item.name.toLowerCase()));
+      const search = normalizeLookup(studentName);
+      return drillStartDateByName.get(search) || "2026-07-13";
+    }
+
+    function computeStudentDrillStartDate(student) {
       const paidDate = parseIndonesianDate(student?.paidDate);
       const minimumStart = "2026-07-13";
       if (!paidDate) return minimumStart;
@@ -3980,7 +4153,6 @@
     }
 
     function startAutoRefresh() {
-      window.setTimeout(() => refreshData({ silent: true, keepFilters: true }), 1200);
       window.setInterval(() => refreshData({ silent: true, keepFilters: true }), 5 * 60 * 1000);
     }
 
@@ -4001,6 +4173,7 @@
           : (await Promise.all(branches.map((branch) => loadDrillRowsForBranch(branch)))).flat();
         const refreshedDrillData = buildDrillData(refreshedDrillRows);
         validateRefreshedAttendanceData(refreshedData);
+        validateStoredDrillData(refreshedDrillData);
         data = refreshedData;
         drillData = refreshedDrillData;
         drillLoaded = true;
@@ -4099,6 +4272,7 @@
         }
         drillData = saved.data;
         drillLoaded = true;
+        drillLoadedScope = drillScope();
       } catch (error) {}
     }
 
