@@ -117,6 +117,7 @@ function buildBranchLookup(rows) {
   const serialIndex = indexOf(["user serial", "serial", "user"]);
   const branchIndex = indexOf(["cabang"]);
   const statusIndex = indexOf(["status"]);
+  const schoolIndex = (() => { const i = indexOf(["nama sekolah", "asal sekolah", "sekolah", "school"]); return i >= 0 ? i : 8; })();
   const lookup = new Map();
   lookup.branchTotals = {};
   if (branchIndex < 0) return lookup;
@@ -129,10 +130,11 @@ function buildBranchLookup(rows) {
     const email = normalizeLookup(row[emailIndex]);
     const name = normalizeLookup(row[nameIndex]);
     const serial = normalizeLookup(row[serialIndex]);
+    const school = String(row[schoolIndex] || "").trim();
     const setBranch = (key) => {
       if (!key) return;
       const current = lookup.get(key);
-      if (!current || isActive) lookup.set(key, { branch, isActive });
+      if (!current || isActive) lookup.set(key, { branch, school, isActive });
     };
     setBranch(email ? `email:${email}` : "");
     setBranch(name ? `name:${name}` : "");
@@ -147,6 +149,13 @@ function branchForStudent(row, branchLookup) {
   const serial = normalizeLookup(row[5]);
   const branch = branchLookup.get(`email:${email}`)?.branch || branchLookup.get(`name:${name}`)?.branch || branchLookup.get(`serial:${serial}`)?.branch || "";
   return /isi nama siswa|tanggal paid/i.test(branch) ? "" : branch;
+}
+
+function studentLookupValue(row, branchLookup, key) {
+  const email = normalizeLookup(row[1]);
+  const name = normalizeLookup(row[0]);
+  const serial = normalizeLookup(row[5]);
+  return branchLookup.get(`email:${email}`)?.[key] || branchLookup.get(`name:${name}`)?.[key] || branchLookup.get(`serial:${serial}`)?.[key] || "";
 }
 
 function buildAttendanceData(rows, branchLookup = new Map()) {
@@ -190,6 +199,7 @@ function buildAttendanceData(rows, branchLookup = new Map()) {
         email: String(row[1] || "").trim(),
         class: String(row[2] || "").trim(),
         branch: branchForStudent(row, branchLookup),
+        school: studentLookupValue(row, branchLookup, "school"),
         paidDate: String(row[3] || "").trim(),
         studyDays: String(row[4] || "").trim(),
         status: normalizeStudentStatus(row)

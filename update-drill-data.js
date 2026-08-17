@@ -230,6 +230,7 @@ function buildStudentLookup(rows) {
   const gradeIndex = indexOf(["grade"]);
   const paidDateIndex = indexOf(["tanggal paid", "paid"]);
   const statusIndex = indexOf(["status"]);
+  const schoolIndex = (() => { const i = indexOf(["nama sekolah", "asal sekolah", "sekolah", "school"]); return i >= 0 ? i : 8; })();
   const lookup = new Map();
   rows.slice(1).forEach((row) => {
     const name = valueAt(row, nameIndex);
@@ -240,6 +241,7 @@ function buildStudentLookup(rows) {
       email: valueAt(row, emailIndex),
       class: valueAt(row, gradeIndex),
       branch: isValidBranch(valueAt(row, branchIndex)) ? valueAt(row, branchIndex) : "",
+      school: valueAt(row, schoolIndex),
       paidDate: valueAt(row, paidDateIndex),
       status: valueAt(row, statusIndex)
     };
@@ -311,6 +313,7 @@ function buildDrillData(rows, studentLookup = new Map()) {
       student,
       class: studentClass,
       branch,
+      school: matchedStudent?.school || "",
       paidDate: matchedStudent?.paidDate || "",
       subject: valueAt(row, subjectIndex) || "-",
       topic: valueAt(row, topicIndex) || "-",
