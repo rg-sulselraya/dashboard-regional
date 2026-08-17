@@ -71,10 +71,10 @@ function toNumber(value) {
 function statusKind(value) {
   const text = String(value ?? "").trim();
   if (!text) return "";
-  const lower = text.toLowerCase();
-  if (lower === "izin") return "Izin";
-  if (lower === "sakit") return "Sakit";
-  if (["alpa", "alpha"].includes(lower)) return "Alpa";
+  const lower = text.toLowerCase().replace(/[^a-z]/g, "");
+  if (["izin", "ijin", "ij", "i"].includes(lower)) return "Izin";
+  if (["sakit", "skit", "skt", "s"].includes(lower)) return "Sakit";
+  if (["alpa", "alpha", "a"].includes(lower)) return "Alpa";
   if (text.match(/^-?\d+([,.]\d+)?$/)) {
     return toNumber(text) > 0 ? "Hadir" : "Alpa";
   }

@@ -505,9 +505,10 @@
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
     const APPS_SCRIPT_URL = "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 10;
+    const LIVE_DATA_SCHEMA_VERSION = 11;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
     const LIVE_DRILL_SCHEMA_VERSION = 5;
+    const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
     const USE_NETLIFY_PROXY = location.hostname.includes("netlify");
     let appsScriptDataPromise = null;
@@ -619,10 +620,11 @@
 
     function init() {
       initAccessGate();
-      restoreLiveData();
+      const restoredAttendance = restoreLiveData();
       restoreLiveDrillData();
       rebuildIndexes();
       fillOptions();
+      if (!restoredAttendance) updateDataSourceStatus("Data lokal");
       setAttendanceMode(attendanceMode);
       inputIds.map($).forEach((input) => {
         input.addEventListener("input", handleFilterInput);
@@ -650,7 +652,6 @@
       document.querySelectorAll("[data-drill-mode]").forEach((tab) => tab.addEventListener("click", () => setDrillMode(tab.dataset.drillMode)));
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
       render();
-      startAutoRefresh();
     }
 
     function setAttendanceMode(mode) {
@@ -923,9 +924,7 @@
       const minimumStart = "2026-07-13";
       const paidDate = parseIndonesianDate(student?.paidDate);
       if (!paidDate || paidDate < minimumStart) return minimumStart;
-      const nextDate = new Date(`${paidDate}T00:00:00`);
-      nextDate.setDate(nextDate.getDate() + 1);
-      return isoLocalDate(nextDate);
+      return paidDate;
     }
 
     function itemWeekStart(item) {
@@ -3170,35 +3169,46 @@
       if (!(refreshedData.records || []).length) {
         throw new Error("entri presensi terbaca kosong");
       }
-      const fallbackStatuses = new Set((window.ATTENDANCE_DATA?.records || []).map((record) => record.status));
-      const refreshedStatuses = new Set((refreshedData.records || []).map((record) => record.status));
-      ["Izin", "Sakit"].forEach((status) => {
-        if (fallbackStatuses.has(status) && !refreshedStatuses.has(status)) {
-          throw new Error(`${status} tidak terbaca dari refresh live`);
-        }
-      });
+      validateAttendanceStatuses(refreshedData, "refresh live");
     }
 
     function updateLiveScriptStatus(date, label = "Data live") {
       $("liveScriptStatus").innerHTML = `<span class="live-dot"></span><span>${label}: ${date.toLocaleString("id-ID", { day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }).replaceAll(".", ":")}</span>`;
     }
 
+    function updateDataSourceStatus(label = "Data lokal") {
+      const generatedFrom = String(data.generatedFrom || "").replace(/^Google Sheets\s*/i, "").trim();
+      const suffix = generatedFrom ? `: ${generatedFrom}` : "";
+      $("liveScriptStatus").innerHTML = `<span class="live-dot"></span><span>${label}${suffix}</span>`;
+    }
+
     function saveLiveData(refreshedData, date) {
       try {
+        validateStoredLiveData(refreshedData);
         localStorage.setItem(LIVE_DATA_STORAGE_KEY, JSON.stringify({ version: LIVE_DATA_SCHEMA_VERSION, updatedAt: date.toISOString(), data: refreshedData }));
+      } catch (error) {}
+    }
+
+    function clearStoredLiveAttendanceData() {
+      try {
+        localStorage.removeItem(LIVE_DATA_STORAGE_KEY);
       } catch (error) {}
     }
 
     function restoreLiveData() {
       try {
         const saved = JSON.parse(localStorage.getItem(LIVE_DATA_STORAGE_KEY) || "null");
-        if (!saved?.data) return;
-        if (saved.version !== LIVE_DATA_SCHEMA_VERSION) return;
+        if (!saved?.data) return false;
+        if (saved.version !== LIVE_DATA_SCHEMA_VERSION) return false;
         const restoredData = normalizeData(saved.data);
         validateStoredLiveData(restoredData);
         data = restoredData;
         if (saved.updatedAt) updateLiveScriptStatus(new Date(saved.updatedAt), "Presensi tersimpan");
-      } catch (error) {}
+        return true;
+      } catch (error) {
+        localStorage.removeItem(LIVE_DATA_STORAGE_KEY);
+        return false;
+      }
     }
 
     function saveLiveDrillData(refreshedDrillData, date) {
@@ -3222,6 +3232,21 @@
       if ((storedData.weeks || []).length < 4 || !(storedData.records || []).length) {
         throw new Error("Stored live data incomplete");
       }
+      validateAttendanceStatuses(storedData, "data tersimpan");
+    }
+
+    function validateAttendanceStatuses(candidateData, label) {
+      const fallbackStatuses = attendanceStatusSet(window.ATTENDANCE_DATA);
+      const candidateStatuses = attendanceStatusSet(candidateData);
+      EXPECTED_ATTENDANCE_STATUSES.forEach((status) => {
+        if (fallbackStatuses.has(status) && !candidateStatuses.has(status)) {
+          throw new Error(`${status} tidak terbaca dari ${label}`);
+        }
+      });
+    }
+
+    function attendanceStatusSet(source) {
+      return new Set((source?.records || []).map((record) => recordStatus(record)).filter(Boolean));
     }
 
     function validateStoredDrillData(storedData) {
@@ -3840,9 +3865,9 @@
       const text = String(value ?? "").trim();
       if (!text) return "";
       const lower = text.toLowerCase().replace(/[^a-z]/g, "");
-      if (["izin", "ijin", "i"].includes(lower)) return "Izin";
-      if (["sakit", "s"].includes(lower)) return "Sakit";
-      if (["alpa", "alpha"].includes(lower)) return "Alpa";
+      if (["izin", "ijin", "ij", "i"].includes(lower)) return "Izin";
+      if (["sakit", "skit", "skt", "s"].includes(lower)) return "Sakit";
+      if (["alpa", "alpha", "a"].includes(lower)) return "Alpa";
       if (text.match(/^-?\d+([,.]\d+)?$/)) {
         return toNumber(text) > 0 ? "Hadir" : "Alpa";
       }
