@@ -238,10 +238,11 @@
     .drill-summary-body .detail-grid { padding: 0; }
     .drill-summary-body:has(.student-drill-insight[hidden]) { grid-template-columns: 1fr; }
     .drill-summary-body:has(.student-drill-insight:not(.inactive-insight):not([hidden])) { grid-template-columns: 1fr; }
+    .drill-summary-body:has(.student-drill-insight.inactive-insight:not([hidden])) { grid-template-columns: 1fr; }
     .drill-summary-body .student-drill-insight[hidden] + .detail-grid,
     .drill-summary-body .student-drill-insight[hidden] { display: none !important; }
     .student-drill-insight { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.6fr); gap: 10px; min-width: 0; }
-    .student-drill-insight.inactive-insight { grid-column: 2; grid-row: 1; grid-template-columns: 1fr; }
+    .student-drill-insight.inactive-insight { grid-column: 1 / -1; grid-row: auto; grid-template-columns: minmax(280px, 0.65fr) minmax(0, 1.35fr); }
     .student-drill-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fff; }
     .student-drill-card.primary { display: flex; flex-direction: column; justify-content: center; min-height: 76px; background: #f5fbff; }
     .student-drill-card.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 7px; }
@@ -251,7 +252,6 @@
     .inactive-insight .student-drill-card.metrics { grid-template-columns: 1fr; align-content: start; min-height: 78px; padding: 6px; }
     .inactive-insight .student-drill-metric { min-height: 0; padding: 6px 8px; }
     .inactive-priority { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-    .drill-summary-body .inactive-priority { grid-template-columns: 1fr; }
     .inactive-class-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 5px 8px; border-radius: 7px; background: #f8fbfd; }
     .inactive-class-name { min-width: 0; color: var(--ink); font-size: 12px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inactive-class-meta { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.05; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
