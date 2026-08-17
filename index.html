@@ -503,7 +503,7 @@
 
   <script>
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
-    const APPS_SCRIPT_URL = "";
+    const APPS_SCRIPT_URL = localStorage.getItem("sulselRayaAppsScriptUrl") || "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
     const LIVE_DATA_SCHEMA_VERSION = 11;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
@@ -3272,6 +3272,12 @@
           console.warn("Netlify proxy refresh failed, falling back:", error);
         }
       }
+      try {
+        return await loadSheetRowsDirectCsv({ gid });
+      } catch (error) {
+        console.warn("Direct CSV refresh failed:", error);
+        if (gid === "0") throw new Error("Refresh live CSV gagal. Data lokal tetap dipakai.");
+      }
       return loadSheetRowsFallback(gid);
     }
 
@@ -3285,7 +3291,23 @@
           console.warn("Netlify sheet refresh failed, falling back:", error);
         }
       }
+      try {
+        return await loadSheetRowsDirectCsv({ sheetName, range: "A:V" });
+      } catch (error) {
+        console.warn("Direct CSV sheet refresh failed:", error);
+      }
       return loadSheetRowsFallback("0", sheetName);
+    }
+
+
+    async function loadSheetRowsDirectCsv({ gid = "", sheetName = "", range = "" } = {}) {
+      const base = "https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
+      const url = sheetName
+        ? `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}${range ? `&range=${encodeURIComponent(range)}` : ""}&cachebust=${Date.now()}`
+        : `${base}/export?format=csv&gid=${encodeURIComponent(gid)}&cachebust=${Date.now()}`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return parseCsv(await response.text());
     }
 
 
