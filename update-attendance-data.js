@@ -4,7 +4,7 @@ const https = require("https");
 
 const SHEET_ID = "1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-const OUT = path.join(__dirname, "..", "attendance-data.js");
+const OUT = path.join(__dirname, "attendance-data.js");
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {

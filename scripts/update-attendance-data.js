@@ -114,6 +114,7 @@ function buildBranchLookup(rows) {
   });
   const emailIndex = indexOf(["email"]);
   const nameIndex = indexOf(["nama siswa", "student"]);
+  const serialIndex = indexOf(["user serial", "serial", "user"]);
   const branchIndex = indexOf(["cabang"]);
   const statusIndex = indexOf(["status"]);
   const lookup = new Map();
@@ -127,6 +128,7 @@ function buildBranchLookup(rows) {
     if (isActive) lookup.branchTotals[branch] = (lookup.branchTotals[branch] || 0) + 1;
     const email = normalizeLookup(row[emailIndex]);
     const name = normalizeLookup(row[nameIndex]);
+    const serial = normalizeLookup(row[serialIndex]);
     const setBranch = (key) => {
       if (!key) return;
       const current = lookup.get(key);
@@ -134,6 +136,7 @@ function buildBranchLookup(rows) {
     };
     setBranch(email ? `email:${email}` : "");
     setBranch(name ? `name:${name}` : "");
+    setBranch(serial ? `serial:${serial}` : "");
   });
   return lookup;
 }
@@ -141,7 +144,8 @@ function buildBranchLookup(rows) {
 function branchForStudent(row, branchLookup) {
   const email = normalizeLookup(row[1]);
   const name = normalizeLookup(row[0]);
-  const branch = branchLookup.get(`email:${email}`)?.branch || branchLookup.get(`name:${name}`)?.branch || "";
+  const serial = normalizeLookup(row[5]);
+  const branch = branchLookup.get(`email:${email}`)?.branch || branchLookup.get(`name:${name}`)?.branch || branchLookup.get(`serial:${serial}`)?.branch || "";
   return /isi nama siswa|tanggal paid/i.test(branch) ? "" : branch;
 }
 

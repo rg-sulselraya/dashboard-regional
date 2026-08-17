@@ -3,10 +3,9 @@ const path = require("path");
 const https = require("https");
 
 const SHEET_ID = "1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
-const GID = "246622240";
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
-const ATTENDANCE_IN = path.join(__dirname, "..", "attendance-data.js");
-const OUT = path.join(__dirname, "..", "drill-data.js");
+const STUDENT_SHEET = "Data Siswa";
+const ATTENDANCE_IN = path.join(__dirname, "attendance-data.js");
+const OUT = path.join(__dirname, "drill-data.js");
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -78,9 +77,37 @@ function loadAttendanceStudents() {
 }
 
 const students = loadAttendanceStudents();
+const BRANCH_SHEET_FALLBACKS = [
+  "Bone - Ahmad Yani",
+  "Bulukumba - Jend. Sudirman",
+  "Gowa - Sungguminasa",
+  "Makassar - Baruga",
+  "Makassar - Cendrawasih",
+  "Makassar - Hertasning",
+  "Makassar - Perintis",
+  "Makassar - Sudiang",
+  "Palopo - Andi Kambo",
+  "Pangkep - Sultan Hasanuddin",
+  "Parepare - Mattirotasi",
+  "Pinrang - Jend. Sudirman",
+  "Sidrap - Jenderal Sudirman",
+  "Sidrap - Jendral Sudirman",
+  "Soppeng - Lalabata",
+  "Tana Toraja - Makale",
+  "Toraja Utara - Poros Bolu",
+  "Wajo - Jend. Sudirman"
+];
+
+function isValidBranch(value) {
+  return Boolean(String(value || "").trim()) && !/isi nama siswa|tanggal paid/i.test(String(value || ""));
+}
 
 function valueAt(row, index) {
   return index >= 0 ? String(row[index] || "").trim() : "";
+}
+
+function normalizeLookup(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function toNumber(value) {
@@ -93,12 +120,34 @@ function classFromStudent(studentName) {
   return student?.class || "";
 }
 
+function attendanceStudentFromMatchedStudent(student) {
+  if (!student) return null;
+  const email = normalizeLookup(student.email);
+  const name = normalizeLookup(student.name);
+  return students.find((item) => email && normalizeLookup(item.email) === email)
+    || students.find((item) => name && normalizeLookup(item.name) === name)
+    || null;
+}
+
+function studentFromLookup(row, indexes, studentLookup) {
+  const email = normalizeLookup(valueAt(row, indexes.emailIndex));
+  const rawName = normalizeLookup(valueAt(row, indexes.nameIndex));
+  const userSerial = normalizeLookup(valueAt(row, indexes.userIndex));
+  return studentLookup.get(`email:${email}`)
+    || studentLookup.get(`serial:${userSerial}`)
+    || studentLookup.get(`name:${rawName}`)
+    || students.find((item) => normalizeLookup(item.email) === email)
+    || students.find((item) => normalizeLookup(item.name) === rawName)
+    || null;
+}
+
 function normalizeDrillClass(value) {
   return String(value || "").split(",").map((item) => item.trim()).filter(Boolean)[0] || "";
 }
 
 function drillTarget(kelas) {
-  return String(kelas || "").includes("12") ? 10 : 5;
+  const text = String(kelas || "").toUpperCase();
+  return text.includes("12") || text.includes("SNBT") ? 10 : 5;
 }
 
 function normalizeSheetIsoDate(value) {
@@ -115,11 +164,26 @@ function normalizeDrillDate(value) {
   if (!text) return "Tanpa tanggal";
   const sheetIso = normalizeSheetIsoDate(text);
   if (sheetIso) return sheetIso;
+  const monthMap = {
+    jan: "01", january: "01", januari: "01",
+    feb: "02", february: "02", februari: "02",
+    mar: "03", march: "03", maret: "03",
+    apr: "04", april: "04",
+    may: "05", mei: "05",
+    jun: "06", june: "06", juni: "06",
+    jul: "07", july: "07", juli: "07",
+    aug: "08", august: "08", agu: "08", agustus: "08",
+    sep: "09", september: "09",
+    oct: "10", october: "10", okt: "10", oktober: "10",
+    nov: "11", november: "11",
+    dec: "12", december: "12", des: "12", desember: "12"
+  };
+  const idMatch = text.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (idMatch) return `${idMatch[3]}-${monthMap[idMatch[2].toLowerCase()] || "01"}-${String(Number(idMatch[1])).padStart(2, "0")}`;
+  const enMatch = text.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})/);
+  if (enMatch) return `${enMatch[3]}-${monthMap[enMatch[1].toLowerCase()] || "01"}-${String(Number(enMatch[2])).padStart(2, "0")}`;
   const native = new Date(text);
   if (!Number.isNaN(native.getTime())) return native.toISOString().slice(0, 10);
-  const monthMap = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
-  const match = text.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
-  if (match) return `${match[3]}-${monthMap[match[2]] || "01"}-${String(Number(match[1])).padStart(2, "0")}`;
   return text;
 }
 
@@ -148,7 +212,51 @@ function isHeaderLike(value) {
   return ["nama", "nama siswa", "siswa", "kelas", "class"].includes(text);
 }
 
+function isInvalidSheetValue(value) {
+  const text = String(value || "").trim().toLowerCase();
+  return !text || text === "#n/a" || text === "#ref!" || text === "#value!" || text === "#error!" || text === "n/a";
+}
+
+function buildStudentLookup(rows) {
+  const header = rows[0] || [];
+  const indexOf = (patterns) => header.findIndex((cell) => {
+    const label = normalizeLookup(cell);
+    return patterns.some((pattern) => label.includes(pattern));
+  });
+  const branchIndex = indexOf(["cabang"]);
+  const serialIndex = indexOf(["user serial", "serial", "user"]);
+  const emailIndex = indexOf(["email"]);
+  const nameIndex = indexOf(["nama siswa", "student"]);
+  const gradeIndex = indexOf(["grade"]);
+  const paidDateIndex = indexOf(["tanggal paid", "paid"]);
+  const statusIndex = indexOf(["status"]);
+  const lookup = new Map();
+  rows.slice(1).forEach((row) => {
+    const name = valueAt(row, nameIndex);
+    const email = normalizeLookup(valueAt(row, emailIndex));
+    if (!name && !email) return;
+    const student = {
+      name,
+      email: valueAt(row, emailIndex),
+      class: valueAt(row, gradeIndex),
+      branch: isValidBranch(valueAt(row, branchIndex)) ? valueAt(row, branchIndex) : "",
+      paidDate: valueAt(row, paidDateIndex),
+      status: valueAt(row, statusIndex)
+    };
+    if (email) lookup.set(`email:${email}`, student);
+    const serial = normalizeLookup(valueAt(row, serialIndex));
+    if (serial) lookup.set(`serial:${serial}`, student);
+    if (name) lookup.set(`name:${normalizeLookup(name)}`, student);
+  });
+  return lookup;
+}
+
 function findDrillHeaderRow(rows) {
+  const exactIndex = rows.slice(0, 12).findIndex((row) => {
+    const labels = row.map((cell) => String(cell || "").trim().toLowerCase());
+    return labels.includes("submit time") && labels.includes("email") && labels.includes("subject") && labels.includes("topic");
+  });
+  if (exactIndex >= 0) return exactIndex;
   let bestIndex = 0;
   let bestScore = -1;
   rows.slice(0, 12).forEach((row, index) => {
@@ -163,15 +271,20 @@ function findDrillHeaderRow(rows) {
   return bestIndex;
 }
 
-function buildDrillData(rows) {
+function buildDrillData(rows, studentLookup = new Map()) {
   const headerRowIndex = findDrillHeaderRow(rows);
   const header = (rows[headerRowIndex] || rows[0] || []).map((cell) => String(cell || "").trim().toLowerCase());
   const indexOf = (patterns) => header.findIndex((label) => patterns.some((pattern) => label.includes(pattern)));
   const subjectIndex = 10;
   const topicIndex = 11;
-  const nameIndex = 21;
+  const detectedNameIndex = indexOf(["nama siswa", "student name", "name"]);
+  const nameIndex = detectedNameIndex >= 0 && detectedNameIndex !== 0 ? detectedNameIndex : -1;
+  const userIndex = indexOf(["user"]);
+  const emailIndex = indexOf(["email"]);
   const classIndex = 6;
-  const dateIndex = 16;
+  const branchIndex = 7;
+  const detectedDateIndex = indexOf(["tanggal", "date", "tgl", "waktu"]);
+  const dateIndex = detectedDateIndex >= 0 && detectedDateIndex !== 0 ? detectedDateIndex : 16;
   const monthIndex = 17;
   const weekIndex = 19;
   const correctIndex = 12;
@@ -179,10 +292,14 @@ function buildDrillData(rows) {
   const blankIndex = 14;
   const totalIndex = indexOf(["total", "jumlah"]);
   return rows.slice(headerRowIndex + 1).map((row) => {
-    const student = valueAt(row, nameIndex);
-    const studentClass = classFromStudent(student) || normalizeDrillClass(valueAt(row, classIndex));
-    const rawDate = valueAt(row, dateIndex);
-    if (!student || !studentClass || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
+    const matchedStudent = studentFromLookup(row, { emailIndex, nameIndex, userIndex }, studentLookup);
+    const student = matchedStudent?.name || valueAt(row, nameIndex) || valueAt(row, emailIndex);
+    const attendanceStudent = attendanceStudentFromMatchedStudent(matchedStudent);
+    const studentClass = attendanceStudent?.class || classFromStudent(student) || normalizeDrillClass(valueAt(row, classIndex)) || matchedStudent?.class;
+    const branch = isValidBranch(matchedStudent?.branch) ? matchedStudent.branch : valueAt(row, branchIndex);
+    const rawDate = valueAt(row, dateIndex) || valueAt(row, 0);
+    if (isInvalidSheetValue(student) || isInvalidSheetValue(studentClass) || isHeaderLike(student) || isHeaderLike(studentClass)) return null;
+    if (isInvalidSheetValue(rawDate) || !normalizeDrillDate(rawDate).match(/^\d{4}-\d{2}-\d{2}$/)) return null;
     const correct = toNumber(valueAt(row, correctIndex));
     const wrong = toNumber(valueAt(row, wrongIndex));
     const blank = toNumber(valueAt(row, blankIndex));
@@ -193,6 +310,8 @@ function buildDrillData(rows) {
     return {
       student,
       class: studentClass,
+      branch,
+      paidDate: matchedStudent?.paidDate || "",
       subject: valueAt(row, subjectIndex) || "-",
       topic: valueAt(row, topicIndex) || "-",
       date,
@@ -209,8 +328,21 @@ function buildDrillData(rows) {
 }
 
 (async () => {
-  const csv = await fetchText(CSV_URL);
-  const data = buildDrillData(parseCsv(csv));
+  const studentCsv = await fetchText(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(STUDENT_SHEET)}`);
+  const studentLookup = buildStudentLookup(parseCsv(studentCsv));
+  const drillSheets = [...new Set(
+    [...studentLookup.values()].map((student) => student.branch).filter(isValidBranch).concat(BRANCH_SHEET_FALLBACKS)
+  )];
+  const sheets = await Promise.all(drillSheets.map(async (sheetName) => {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent("A:V")}`;
+    try {
+      return buildDrillData(parseCsv(await fetchText(url)), studentLookup);
+    } catch (error) {
+      console.warn(`Sheet drill "${sheetName}" gagal dimuat: ${error.message || error}`);
+      return [];
+    }
+  }));
+  const data = sheets.flat();
   if (data.length < 100) {
     throw new Error(`Drill data looks incomplete: ${data.length} rows`);
   }
