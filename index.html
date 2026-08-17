@@ -3278,10 +3278,18 @@
         console.warn("Direct CSV refresh failed:", error);
         if (gid === "0") throw new Error("Refresh live CSV gagal. Data lokal tetap dipakai.");
       }
+      if (gid === "0") throw new Error("Refresh live attendance harus memakai Apps Script/CSV. Data lokal tetap dipakai.");
       return loadSheetRowsFallback(gid);
     }
 
     async function loadSheetRowsByName(sheetName) {
+      if (APPS_SCRIPT_URL) {
+        try {
+          return await loadSheetRowsFromAppsScript("", sheetName);
+        } catch (error) {
+          console.warn("Apps Script sheet refresh failed, falling back:", error);
+        }
+      }
       if (USE_NETLIFY_PROXY) {
         try {
           const response = await fetch(`${SHEET_PROXY_URL}?sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent("A:V")}&cachebust=${Date.now()}`, { cache: "no-store" });
@@ -3311,7 +3319,7 @@
     }
 
 
-    async function loadSheetRowsFromAppsScript(gid) {
+    async function loadSheetRowsFromAppsScript(gid, sheetName = "") {
       if (!appsScriptDataPromise) {
         appsScriptDataPromise = fetch(`${APPS_SCRIPT_URL}?cachebust=${Date.now()}`, { cache: "no-store" })
           .then((response) => {
@@ -3320,6 +3328,8 @@
           });
       }
       const payload = await appsScriptDataPromise;
+      if (sheetName === "Data Siswa") return payload?.sheets?.students || payload?.sheets?.["Data Siswa"] || [];
+      if (sheetName) return payload?.sheets?.[sheetName] || [];
       if (gid === "246622240") return payload?.sheets?.drill || [];
       return payload?.sheets?.attendance || [];
     }
