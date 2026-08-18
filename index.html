@@ -271,8 +271,8 @@
     .inactive-insight .student-drill-card.primary { min-height: 78px; padding: 10px 14px; }
     .inactive-insight .student-drill-card.metrics { grid-template-columns: 1fr; align-content: start; min-height: 78px; padding: 6px; }
     .inactive-insight .student-drill-metric { min-height: 0; padding: 6px 8px; }
-    .inactive-priority { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-    .inactive-class-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 5px 8px; border-radius: 7px; background: #f8fbfd; }
+    .inactive-priority { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .inactive-class-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 7px 9px; border-radius: 7px; background: #f8fbfd; }
     .inactive-class-name { min-width: 0; color: var(--ink); font-size: 12px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inactive-class-meta { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.05; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .inactive-class-score { align-self: start; color: #b91c1c; font-size: 15px; line-height: 1; font-weight: 950; }
@@ -633,9 +633,9 @@
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
     const APPS_SCRIPT_URL = localStorage.getItem("sulselRayaAppsScriptUrl") || "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 11;
+    const LIVE_DATA_SCHEMA_VERSION = 12;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
-    const LIVE_DRILL_SCHEMA_VERSION = 8;
+    const LIVE_DRILL_SCHEMA_VERSION = 9;
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
@@ -2793,6 +2793,7 @@
       const selectedBranch = $("branchSelect").value;
       const selectedRegional = $("drillRegionalSelect").value;
       const selectedStudentKey = normalizeLookup(selectedStudent);
+      const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       $("drillRegionalFilterPanel").hidden = Boolean(selectedBranch);
       const rows = drillData.filter((row) => {
         if (!hasDrillTarget(row.class)) return false;
@@ -2800,8 +2801,7 @@
         if (selectedBranch && row.branch !== selectedBranch) return false;
         if (!selectedBranch && selectedRegional && branchRegion(row.branch) !== selectedRegional) return false;
         if (selectedClass && row.class !== selectedClass) return false;
-        if (selectedMonth && !sameDrillMonth(row.month, selectedMonth)) return false;
-        if (selectedWeek && row.week !== selectedWeek) return false;
+        if (selectedPeriodDates && !selectedPeriodDates.has(row.date)) return false;
         return true;
       });
       let dates = drillVisibleDates(selectedMonth, selectedWeek, rows);
@@ -2828,7 +2828,7 @@
       $("drillDateGrid").innerHTML = hasStudentFilter && dates.length
         ? dates.map((date) => renderDrillDateRow(date, rows) + renderStudentSubjectDetail(date, rows)).join("")
         : "";
-      if (!selectedStudent && !selectedClass) {
+      if (!selectedStudent && (!selectedClass || selectedBranch)) {
         renderDrillLeaderboard(rows, dates);
       } else if (selectedStudent || selectedClass) {
         $("drillLeaderboardPanel").hidden = true;
@@ -2914,11 +2914,13 @@
         return;
       }
       const totalActiveStudents = data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch)).length;
-      const displayRows = inactiveDrillRows(selectedRows, dates);
+      const allStatusRows = inactiveDrillRows(selectedRows, dates, true);
+      const displayRows = allStatusRows.filter((row) => row.status.label !== "Siswa Aman");
       const notStarted = displayRows.filter((row) => row.status.label === "Belum Mulai").length;
       const lowActive = displayRows.filter((row) => row.status.label === "Aktif Rendah").length;
       const needPush = displayRows.filter((row) => row.status.label === "Perlu Didorong").length;
-      const safeStudents = Math.max(0, totalActiveStudents - displayRows.length);
+      const safeStudents = allStatusRows.filter((row) => row.status.label === "Siswa Aman").length;
+      const followUpStudents = Math.max(0, totalActiveStudents - safeStudents);
       const followUpPercent = totalActiveStudents ? Math.round((displayRows.length / totalActiveStudents) * 100) : 0;
       $("drillSummaryPanel").hidden = !selectedBranch;
       $("drillDetailPanel").hidden = false;
@@ -2930,27 +2932,27 @@
         { label: "Belum Mulai", valueId: "drillCorrect", className: "detail-start", status: "Belum Mulai" },
         { label: "Aktif Rendah", valueId: "drillWrong", className: "detail-low", status: "Aktif Rendah" },
         { label: "Perlu Didorong", valueId: "drillBlank", className: "detail-push", status: "Perlu Didorong" },
-        { label: "Siswa Aman", valueId: "drillTotal", className: "detail-watch" },
+        { label: "Siswa Aman", valueId: "drillTotal", className: "detail-watch", status: "Siswa Aman" },
         { label: "% Follow-up", valueId: "drillPercent", className: "detail-percent" }
       ]);
       $("drillDetailTitle").textContent = "Siswa Tidak Aktif Drill";
       $("drillTargetNote").textContent = `${numberFmt.format(totalActiveStudents)} siswa aktif`;
-      $("drillTarget").textContent = numberFmt.format(displayRows.length);
+      $("drillTarget").textContent = numberFmt.format(followUpStudents);
       $("drillCorrect").textContent = numberFmt.format(notStarted);
       $("drillWrong").textContent = numberFmt.format(lowActive);
       $("drillBlank").textContent = numberFmt.format(needPush);
       $("drillTotal").textContent = numberFmt.format(safeStudents);
       $("drillPercent").textContent = `${followUpPercent}%`;
-      if (selectedBranch) renderInactiveDrillInsight(displayRows, totalActiveStudents);
+      if (selectedBranch) renderInactiveDrillInsight(displayRows, totalActiveStudents, dates);
       const filteredRows = inactiveDrillStatusFilter
-        ? displayRows.filter((row) => row.status.label === inactiveDrillStatusFilter)
+        ? allStatusRows.filter((row) => row.status.label === inactiveDrillStatusFilter)
         : displayRows;
       renderDrillRows(selectedBranch ? filteredRows : summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, selectedBranch ? "inactive" : "inactiveBranch");
     }
 
-    function renderInactiveDrillInsight(displayRows, totalActiveStudents) {
+    function renderInactiveDrillInsight(displayRows, totalActiveStudents, dates = []) {
       const wrap = $("studentDrillInsight");
-      const classRows = summarizeInactiveRowsByClass(displayRows).slice(0, 5);
+      const classRows = summarizeInactiveRowsByClass(displayRows, dates).slice(0, 3);
       wrap.hidden = false;
       wrap.classList.add("inactive-insight");
       wrap.innerHTML = `
@@ -2961,25 +2963,30 @@
         </div>
         <div class="student-drill-card metrics">
           <div class="student-drill-metric">
-            <div class="student-drill-label">Top Kelas Follow-up</div>
-            <div class="inactive-priority">${classRows.map((row) => `<div class="inactive-class-row"><div><div class="inactive-class-name">${escapeHtml(row.class)}</div><div class="inactive-class-meta">${numberFmt.format(row.followUp)} siswa perlu di FU</div></div><div class="inactive-class-score">${numberFmt.format(row.followUp)}</div></div>`).join("") || `<div class="student-drill-sub">Tidak ada kelas prioritas.</div>`}</div>
+            <div class="student-drill-label">Top 3 Kelas Prioritas</div>
+            <div class="inactive-priority">${classRows.map((row) => `<div class="inactive-class-row"><div><div class="inactive-class-name">${escapeHtml(row.class)}</div><div class="inactive-class-meta">${numberFmt.format(row.notStarted)} BM, ${numberFmt.format(row.lowActive)} AR, ${numberFmt.format(row.needPush)} PD, ${numberFmt.format(row.safe)} Aman</div></div><div class="inactive-class-score">${numberFmt.format(row.followUp)}</div></div>`).join("") || `<div class="student-drill-sub">Tidak ada kelas prioritas.</div>`}</div>
           </div>
         </div>`;
     }
 
-    function summarizeInactiveRowsByClass(rows) {
+    function summarizeInactiveRowsByClass(rows, dates = []) {
       const grouped = new Map();
+      const selectedBranch = $("branchSelect").value;
       rows.forEach((row) => {
-        if (!grouped.has(row.class)) grouped.set(row.class, { class: row.class, followUp: 0, students: 0 });
-        grouped.get(row.class).followUp += 1;
+        if (!grouped.has(row.class)) grouped.set(row.class, { class: row.class, followUp: 0, notStarted: 0, lowActive: 0, needPush: 0, students: 0 });
+        const item = grouped.get(row.class);
+        item.followUp += 1;
+        if (row.status.label === "Belum Mulai") item.notStarted += 1;
+        if (row.status.label === "Aktif Rendah") item.lowActive += 1;
+        if (row.status.label === "Perlu Didorong") item.needPush += 1;
       });
-      data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!$("branchSelect").value || student.branch === $("branchSelect").value)).forEach((student) => {
-        if (!grouped.has(student.class)) grouped.set(student.class, { class: student.class, followUp: 0, students: 0 });
+      data.students.filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch)).forEach((student) => {
+        if (!grouped.has(student.class)) grouped.set(student.class, { class: student.class, followUp: 0, notStarted: 0, lowActive: 0, needPush: 0, students: 0 });
         grouped.get(student.class).students += 1;
       });
       return [...grouped.values()]
         .filter((row) => row.followUp > 0)
-        .map((row) => ({ ...row, percent: row.students ? Math.round((row.followUp / row.students) * 100) : 0 }))
+        .map((row) => ({ ...row, safe: Math.max(0, row.students - row.followUp), percent: row.students ? Math.round((row.followUp / row.students) * 100) : 0 }))
         .sort((a, b) => b.followUp - a.followUp || b.percent - a.percent || compareClass(a.class, b.class));
     }
 
@@ -3058,7 +3065,7 @@
       return "Fokus utama: ajak siswa mulai drill pertama.";
     }
 
-    function inactiveDrillRows(rows, dates) {
+    function inactiveDrillRows(rows, dates, includeSafe = false) {
       const selectedBranch = $("branchSelect").value;
       const targetDates = dates?.length ? dates : classTargetDateRange("");
       const byStudent = summarizeDrillRowsByStudent(rows, (studentName, actualDates) => countStudentTargetDates(studentName, targetDates, actualDates));
@@ -3086,7 +3093,7 @@
         const emptyDays = Math.max(0, targetDayCount - activeDays);
         const targetPercent = row.target ? Math.round((row.correct / row.target) * 100) : 0;
         const activeRatio = targetDayCount ? activeDays / targetDayCount : 0;
-        const status = inactiveStudentStatus({ total: row.total, targetPercent, activeRatio });
+        const status = inactiveStudentStatus({ total: row.total, targetPercent, activeRatio }, includeSafe);
         const reason = status ? inactiveStudentReason({ status, targetPercent, activeDays, targetDayCount, emptyDays }) : "";
         return { ...row, activeDays, emptyDays, targetPercent, status, reason };
       })
@@ -3098,22 +3105,23 @@
           || a.student.localeCompare(b.student, "id"));
     }
 
-    function inactiveStudentStatus({ total, targetPercent, activeRatio }) {
+    function inactiveStudentStatus({ total, targetPercent, activeRatio }, includeSafe = false) {
       if (!total) return { label: "Belum Mulai", kind: "neutral" };
       if (activeRatio < 0.6) return { label: "Aktif Rendah", kind: "bad" };
       if (targetPercent < 60) return { label: "Perlu Didorong", kind: "bad" };
-      return null;
+      return includeSafe ? { label: "Siswa Aman", kind: "good" } : null;
     }
 
     function inactiveStudentReason({ status, targetPercent, activeDays, targetDayCount, emptyDays }) {
       if (status.label === "Belum Mulai") return "belum ada pengerjaan drill";
       if (status.label === "Aktif Rendah") return `aktif ${numberFmt.format(activeDays)} dari ${numberFmt.format(targetDayCount)} hari`;
       if (status.label === "Perlu Didorong") return `%Ach baru ${targetPercent}% dari target`;
+      if (status.label === "Siswa Aman") return `hari aktif cukup, %Ach ${targetPercent}%`;
       return `${numberFmt.format(emptyDays)} hari kosong, %Ach ${targetPercent}%`;
     }
 
     function inactiveStatusPriority(label) {
-      return { "Belum Mulai": 0, "Aktif Rendah": 1, "Perlu Didorong": 2, "Perlu Dijaga": 3 }[label] ?? 9;
+      return { "Belum Mulai": 0, "Aktif Rendah": 1, "Perlu Didorong": 2, "Siswa Aman": 3, "Perlu Dijaga": 4 }[label] ?? 9;
     }
 
     function renderDrillSummaryCards(items) {
@@ -3404,7 +3412,7 @@
         return;
       }
       if (mode === "inactive") {
-        const headers = ["Nama", "Kelas", "Target", "Total", "%Ach", "Aktif", "Kosong", "Status", "Alasan"];
+        const headers = ["Nama", "Kelas", "Target", "Total", "%Ach", "Hari Aktif", "Hari Kosong", "Status", "Alasan"];
         $("drillRowsHead").innerHTML = `<tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>`;
         $("drillRows").innerHTML = displayRows.length ? displayRows.map((row) => `<tr>
           <td class="name"><button type="button" class="drill-student-link" data-drill-student="${escapeHtml(row.student)}" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.student)}</button></td>
@@ -3560,14 +3568,14 @@
       const selectedWeek = $("drillWeekSelect").value;
       const selectedRegional = $("drillRegionalSelect").value;
       const leaderboardTargetDates = leaderboardVisibleTargetDates(selectedMonth, selectedWeek);
+      const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       const dateSet = new Set(dates);
       const filteredRows = selectedBranch
         ? rows.filter((row) => !dateSet.size || dateSet.has(row.date))
         : (drillFallbackData.length ? drillFallbackData : rows).filter((row) => {
             if (!hasDrillTarget(row.class)) return false;
             if (selectedRegional && branchRegion(row.branch) !== selectedRegional) return false;
-            if (selectedMonth && !sameDrillMonth(row.month, selectedMonth)) return false;
-            if (selectedWeek && row.week !== selectedWeek) return false;
+            if (selectedPeriodDates && !selectedPeriodDates.has(row.date)) return false;
             return true;
           });
       if (drillMode === "class") {
@@ -3609,6 +3617,12 @@
       if (week) return drillWeekRange(month, week);
       if (month) return drillVisibleDates(month, "", []);
       return classTargetDateRange("");
+    }
+
+    function drillPeriodDateSet(month, week) {
+      if (!month && !week) return null;
+      const dates = drillVisibleDates(month, week, []);
+      return dates.length ? new Set(dates) : null;
     }
 
     function studentRecordForDrillRow(row) {
@@ -4818,6 +4832,7 @@
       const selectedWeek = $("drillWeekSelect").value;
       const date = selectedDrillDate;
       const activeDates = currentDrillDates.length ? currentDrillDates : [date].filter(Boolean);
+      const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       if (!activeDates.length) {
         alert("Tidak ada tanggal drill sesuai filter saat ini.");
         return;
@@ -4825,8 +4840,7 @@
       const rows = drillData.filter((row) => {
         if (selectedStudent && !row.student.toLowerCase().includes(selectedStudent)) return false;
         if (drillMode === "class" && selectedClass && row.class !== selectedClass) return false;
-        if (selectedMonth && !sameDrillMonth(row.month, selectedMonth)) return false;
-        if (selectedWeek && row.week !== selectedWeek) return false;
+        if (selectedPeriodDates && !selectedPeriodDates.has(row.date)) return false;
         if (!activeDates.includes(row.date)) return false;
         return true;
       });
