@@ -372,6 +372,8 @@
     .daily-branch-date { display: inline-grid; gap: 3px; min-width: 170px; }
     .daily-branch-date input { height: 34px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 10px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; font-weight: 850; }
     .daily-branch-count { color: var(--blue-dark); font-size: 13px; font-weight: 950; white-space: nowrap; }
+    .daily-class-filter { padding: 0 12px 12px; }
+    .daily-class-filter select { width: min(100%, 320px); height: 36px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 10px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; font-weight: 850; }
     .daily-grade-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
     .daily-grade-toggle { min-height: 34px; height: auto; display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; color: #0f5f8f; border-color: #c8e2f0; background: #fff; font-size: 12px; font-weight: 950; }
     .daily-grade-toggle.active { color: #fff; border-color: #007fc7; background: linear-gradient(135deg, #00809d 0%, #007fc7 100%); box-shadow: 0 8px 18px rgba(0, 127, 199, 0.18); }
@@ -704,6 +706,7 @@
       let inactiveDrillStatusFilter = "";
       let selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
       let selectedDailyMissingGradeByBranch = new Map();
+      let selectedDailyMissingClassByBranchGrade = new Map();
       let byId = new Map();
     let studentByName = new Map();
     let studentsByName = new Map();
@@ -836,19 +839,12 @@
         renderDailyMissingDrill();
       });
       $("dailyMissingDrillGroups").addEventListener("click", (event) => {
-        const dateInput = event.target.closest("[data-daily-date]");
-        if (dateInput) return;
+        if (event.target.closest("[data-daily-date], [data-daily-class]")) return;
         const button = event.target.closest("[data-daily-grade]");
         if (!button) return;
         const branch = button.dataset.dailyBranch || "";
         const grade = button.dataset.dailyGrade || "";
         selectedDailyMissingGradeByBranch.set(branch, selectedDailyMissingGradeByBranch.get(branch) === grade ? "" : grade);
-        renderDailyMissingDrill();
-      });
-      $("dailyMissingDrillGroups").addEventListener("change", (event) => {
-        const dateInput = event.target.closest("[data-daily-date]");
-        if (!dateInput) return;
-        selectedDailyMissingDrillDate = dateInput.value || DASHBOARD_MIN_TODAY;
         renderDailyMissingDrill();
       });
       $("drillRows").addEventListener("click", handleDrillRowsClick);
@@ -3730,6 +3726,9 @@
       if (!dateInput) return;
       if (!selectedDailyMissingDrillDate) selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
       if (dateInput.value !== selectedDailyMissingDrillDate) dateInput.value = selectedDailyMissingDrillDate;
+      const selectedClass = $("drillClassSelect").value;
+      $("dailyMissingDrillPanel").hidden = Boolean(selectedClass);
+      if (selectedClass) return;
       const selectedBranch = $("branchSelect").value;
       const selectedRegional = $("drillRegionalSelect").value;
       const selectedDate = selectedDailyMissingDrillDate;
@@ -3790,20 +3789,43 @@
     function renderDailyMissingBranch(branchItem) {
       const selectedGrade = selectedDailyMissingGradeByBranch.get(branchItem.branch) || "";
       const selectedGradeItem = branchItem.grades.find((gradeItem) => gradeItem.grade === selectedGrade) || branchItem.grades[0] || { grade: "", items: [] };
+      const selectedClass = selectedDailyMissingClassByBranchGrade.get(dailyMissingClassFilterKey(branchItem.branch, selectedGrade)) || "";
+      const classOptions = selectedGradeItem.items.length ? [...new Set(selectedGradeItem.items.map((student) => student.class).filter(Boolean))].sort(compareClass) : [];
+      const visibleStudents = selectedGrade ? selectedGradeItem.items.filter((student) => !selectedClass || student.class === selectedClass) : [];
       return `<details class="daily-branch" open>
-        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" onclick="event.stopPropagation()"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
+        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" onclick="event.stopPropagation()" onchange="setDailyMissingDate(this.value || '')"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
         <div class="daily-grade-row">
           ${branchItem.grades.map((gradeItem) => `<button type="button" class="daily-grade-toggle ${gradeItem.grade === selectedGrade ? "active" : ""}" data-daily-branch="${escapeHtml(branchItem.branch)}" data-daily-grade="${escapeHtml(gradeItem.grade)}"><span>${escapeHtml(gradeItem.grade)}</span><span class="daily-grade-count">${numberFmt.format(gradeItem.items.length)}</span></button>`).join("")}
         </div>
-        ${selectedGrade ? `<div class="daily-student-table-wrap">
+        ${selectedGrade ? `<div class="daily-class-filter">
+          <select data-daily-class data-daily-branch="${escapeHtml(branchItem.branch)}" data-daily-grade="${escapeHtml(selectedGrade)}" onchange="setDailyMissingClassFilter(this.dataset.dailyBranch || '', this.dataset.dailyGrade || '', this.value || '')">
+            <option value="">Semua kelas</option>
+            ${classOptions.map((kelas) => `<option value="${escapeHtml(kelas)}" ${kelas === selectedClass ? "selected" : ""}>${escapeHtml(kelas)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="daily-student-table-wrap">
           <table class="daily-student-table">
             <thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Sekolah</th></tr></thead>
             <tbody>
-              ${selectedGradeItem.items.map((student) => `<tr><td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.class)}</td><td>${escapeHtml(studentSchoolName(student) || "-")}</td></tr>`).join("") || `<tr><td colspan="3" class="empty">Tidak ada siswa pada jenjang ini.</td></tr>`}
+              ${visibleStudents.map((student) => `<tr><td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.class)}</td><td>${escapeHtml(studentSchoolName(student) || "-")}</td></tr>`).join("") || `<tr><td colspan="3" class="empty">Tidak ada siswa pada kelas ini.</td></tr>`}
             </tbody>
           </table>
         </div>` : ""}
       </details>`;
+    }
+
+    function dailyMissingClassFilterKey(branch, grade) {
+      return `${branch}|${grade}`;
+    }
+
+    function setDailyMissingClassFilter(branch, grade, value) {
+      selectedDailyMissingClassByBranchGrade.set(dailyMissingClassFilterKey(branch, grade), value || "");
+      renderDailyMissingDrill();
+    }
+
+    function setDailyMissingDate(value) {
+      selectedDailyMissingDrillDate = value || DASHBOARD_MIN_TODAY;
+      renderDailyMissingDrill();
     }
 
     function renderLeaderboardMeta(item) {
