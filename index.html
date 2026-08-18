@@ -356,6 +356,32 @@
     .top-performer-leaderboard .leaderboard-meta { margin-top: 7px; font-size: 12px; font-weight: 800; color: #52657a; overflow: hidden; }
     .top-performer-leaderboard .leaderboard-meta-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .top-performer-leaderboard .leaderboard-score { min-width: 82px; min-height: 48px; justify-content: center; justify-self: end; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; font-size: 30px; background: rgba(255,255,255,0.7); box-shadow: inset 0 1px 0 rgba(255,255,255,0.72); }
+    .daily-missing-panel .panel-head { background: linear-gradient(135deg, #fbfdff 0%, #eef8fd 100%); }
+    .daily-missing-body { display: grid; gap: 14px; padding: 14px; align-items: start; }
+    .daily-missing-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .daily-missing-controls label { display: grid; gap: 5px; color: #64748b; font-size: 12px; font-weight: 900; }
+    .daily-missing-controls input { width: 220px; height: 40px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 12px; color: var(--ink); background: #fff; font: inherit; font-weight: 850; }
+    .daily-missing-summary { display: none; }
+    .daily-missing-card { min-width: 0; min-height: 92px; display: grid; align-content: center; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: #fbfdff; }
+    .daily-missing-label { color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .daily-missing-value { margin-top: 6px; color: var(--ink); font-size: 28px; line-height: 1; font-weight: 950; }
+    .daily-missing-groups { grid-column: 1 / -1; display: grid; gap: 10px; }
+    .daily-branch { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
+    .daily-branch > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; cursor: pointer; background: #f8fbfd; font-weight: 950; }
+    .daily-branch-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+    .daily-branch-date { display: inline-grid; gap: 3px; min-width: 170px; }
+    .daily-branch-date input { height: 34px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 10px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; font-weight: 850; }
+    .daily-branch-count { color: var(--blue-dark); font-size: 13px; font-weight: 950; white-space: nowrap; }
+    .daily-grade-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+    .daily-grade-toggle { min-height: 34px; height: auto; display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; color: #0f5f8f; border-color: #c8e2f0; background: #fff; font-size: 12px; font-weight: 950; }
+    .daily-grade-toggle.active { color: #fff; border-color: #007fc7; background: linear-gradient(135deg, #00809d 0%, #007fc7 100%); box-shadow: 0 8px 18px rgba(0, 127, 199, 0.18); }
+    .daily-grade-count { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 20px; padding: 0 7px; border-radius: 999px; color: inherit; background: rgba(0, 127, 199, 0.1); font-size: 11px; }
+    .daily-grade-toggle.active .daily-grade-count { background: rgba(255, 255, 255, 0.22); }
+    .daily-student-table-wrap { overflow: auto; padding: 0 12px 12px; }
+    .daily-student-table { width: 100%; min-width: 620px; border-collapse: separate; border-spacing: 0; }
+    .daily-student-table th { padding: 10px 12px; color: #64748b; background: #f0f8fc; font-size: 11px; font-weight: 950; text-transform: uppercase; text-align: left; }
+    .daily-student-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); background: #fff; font-size: 13px; }
+    .daily-student-table td:first-child { color: var(--ink); font-weight: 500; }
     .detail-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 16px; }
     .detail-item { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fbfdff; }
     .detail-item.actionable { text-align: left; cursor: pointer; }
@@ -409,6 +435,9 @@
       .top-performer-leaderboard .leaderboard-meta { font-size: 11px; }
       .top-performer-leaderboard .leaderboard-meta-line { white-space: normal; }
       .top-performer-leaderboard .leaderboard-score { min-width: 68px; min-height: 42px; padding: 0 10px; font-size: 22px; }
+      .daily-grade-row { flex-wrap: nowrap; overflow-x: auto; }
+      .daily-grade-toggle { flex: 0 0 auto; }
+      .daily-missing-controls input { width: 100%; }
       .drill-summary-body { grid-template-columns: 1fr; padding: 10px; }
       .student-drill-insight.inactive-insight { grid-column: auto; grid-row: auto; }
       .detail-grid { grid-template-columns: 1fr 1fr; }
@@ -566,6 +595,17 @@
         <div class="grade-tabs" id="drillGradeTabs" hidden></div>
         <div class="leaderboard-grid" id="drillLeaderboardGrid"></div>
       </div>
+      <div class="panel daily-missing-panel" id="dailyMissingDrillPanel">
+        <div class="panel-head">
+          <h2>Siswa Belum Drill per Tanggal</h2>
+          <span class="pill" id="dailyMissingDrillCount">0 siswa</span>
+        </div>
+        <div class="daily-missing-body">
+          <input id="dailyMissingDrillDate" type="date" hidden>
+          <div class="daily-missing-summary" id="dailyMissingDrillSummary"></div>
+          <div class="daily-missing-groups" id="dailyMissingDrillGroups"></div>
+        </div>
+      </div>
       <div class="panel" id="drillSummaryPanel" hidden>
         <div class="panel-head">
           <h2 id="drillDetailTitle">Detail Drill</h2>
@@ -659,10 +699,12 @@
     let expandedAttendanceStudent = "";
     let expandedAttendanceClass = "";
     let editingAttendanceKey = "";
-    let drillMode = "student";
-    let selectedDrillGrade = "12 SMA";
-    let inactiveDrillStatusFilter = "";
-    let byId = new Map();
+      let drillMode = "student";
+      let selectedDrillGrade = "12 SMA";
+      let inactiveDrillStatusFilter = "";
+      let selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
+      let selectedDailyMissingGradeByBranch = new Map();
+      let byId = new Map();
     let studentByName = new Map();
     let studentsByName = new Map();
     let studentByEmail = new Map();
@@ -788,6 +830,26 @@
       ["drillStudentInput", "drillClassSelect", "drillMonthSelect", "drillWeekSelect"].forEach((id) => {
         $(id).addEventListener("input", handleDrillFilterInput);
         $(id).addEventListener("change", handleDrillFilterInput);
+      });
+      $("dailyMissingDrillDate").addEventListener("change", () => {
+        selectedDailyMissingDrillDate = $("dailyMissingDrillDate").value || DASHBOARD_MIN_TODAY;
+        renderDailyMissingDrill();
+      });
+      $("dailyMissingDrillGroups").addEventListener("click", (event) => {
+        const dateInput = event.target.closest("[data-daily-date]");
+        if (dateInput) return;
+        const button = event.target.closest("[data-daily-grade]");
+        if (!button) return;
+        const branch = button.dataset.dailyBranch || "";
+        const grade = button.dataset.dailyGrade || "";
+        selectedDailyMissingGradeByBranch.set(branch, selectedDailyMissingGradeByBranch.get(branch) === grade ? "" : grade);
+        renderDailyMissingDrill();
+      });
+      $("dailyMissingDrillGroups").addEventListener("change", (event) => {
+        const dateInput = event.target.closest("[data-daily-date]");
+        if (!dateInput) return;
+        selectedDailyMissingDrillDate = dateInput.value || DASHBOARD_MIN_TODAY;
+        renderDailyMissingDrill();
       });
       $("drillRows").addEventListener("click", handleDrillRowsClick);
       $("drillGradeTabs").addEventListener("click", (event) => {
@@ -2795,6 +2857,7 @@
       const selectedStudentKey = normalizeLookup(selectedStudent);
       const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       $("drillRegionalFilterPanel").hidden = Boolean(selectedBranch);
+      renderDailyMissingDrill();
       const rows = drillData.filter((row) => {
         if (!hasDrillTarget(row.class)) return false;
         if (selectedStudentKey && !normalizeLookup(row.student).includes(selectedStudentKey)) return false;
@@ -2923,12 +2986,12 @@
       const followUpStudents = Math.max(0, totalActiveStudents - safeStudents);
       const followUpPercent = totalActiveStudents ? Math.round((displayRows.length / totalActiveStudents) * 100) : 0;
       $("drillSummaryPanel").hidden = !selectedBranch;
-      $("drillDetailPanel").hidden = false;
-      $("drillRowsWrap").hidden = false;
+      $("drillDetailPanel").hidden = true;
+      $("drillRowsWrap").hidden = true;
       $("studentDrillInsight").hidden = true;
       $("studentDrillInsight").innerHTML = "";
       renderDrillSummaryCards([
-        { label: "Follow-up", valueId: "drillTarget", className: "detail-follow", status: "" },
+        { label: "Follow-up", valueId: "drillTarget", className: "detail-follow", status: "Follow-up" },
         { label: "Belum Mulai", valueId: "drillCorrect", className: "detail-start", status: "Belum Mulai" },
         { label: "Aktif Rendah", valueId: "drillWrong", className: "detail-low", status: "Aktif Rendah" },
         { label: "Perlu Didorong", valueId: "drillBlank", className: "detail-push", status: "Perlu Didorong" },
@@ -2944,10 +3007,14 @@
       $("drillTotal").textContent = numberFmt.format(safeStudents);
       $("drillPercent").textContent = `${followUpPercent}%`;
       if (selectedBranch) renderInactiveDrillInsight(displayRows, totalActiveStudents, dates);
-      const filteredRows = inactiveDrillStatusFilter
-        ? allStatusRows.filter((row) => row.status.label === inactiveDrillStatusFilter)
-        : displayRows;
-      renderDrillRows(selectedBranch ? filteredRows : summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, selectedBranch ? "inactive" : "inactiveBranch");
+      const filteredRows = inactiveDrillStatusFilter === "Follow-up"
+        ? displayRows
+        : inactiveDrillStatusFilter
+          ? allStatusRows.filter((row) => row.status.label === inactiveDrillStatusFilter)
+          : [];
+      $("drillDetailPanel").hidden = !inactiveDrillStatusFilter;
+      $("drillRowsWrap").hidden = !inactiveDrillStatusFilter;
+      if (inactiveDrillStatusFilter) renderDrillRows(selectedBranch ? filteredRows : summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, selectedBranch ? "inactive" : "inactiveBranch");
     }
 
     function renderInactiveDrillInsight(displayRows, totalActiveStudents, dates = []) {
@@ -3656,6 +3723,87 @@
           <div class="leaderboard-score score-${index + 1}">${item.percent}%</div>
         </div>`).join("") : `<div class="empty">Belum ada data.</div>`}
       </div>`;
+    }
+
+    function renderDailyMissingDrill() {
+      const dateInput = $("dailyMissingDrillDate");
+      if (!dateInput) return;
+      if (!selectedDailyMissingDrillDate) selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
+      if (dateInput.value !== selectedDailyMissingDrillDate) dateInput.value = selectedDailyMissingDrillDate;
+      const selectedBranch = $("branchSelect").value;
+      const selectedRegional = $("drillRegionalSelect").value;
+      const selectedDate = selectedDailyMissingDrillDate;
+      const activeTargetStudents = data.students
+        .filter((student) => isActiveStudent(student) && hasDrillTarget(student.class))
+        .filter((student) => !selectedBranch || student.branch === selectedBranch)
+        .filter((student) => selectedBranch || !selectedRegional || branchRegion(student.branch) === selectedRegional)
+        .filter((student) => isStudentTargetDate(student.name, selectedDate));
+      const drilledKeys = new Set(drillData
+        .filter((row) => row.date === selectedDate)
+        .filter((row) => !selectedBranch || row.branch === selectedBranch)
+        .map((row) => dailyDrillStudentKey(row.branch, row.student)));
+      const missingStudents = activeTargetStudents.filter((student) => !drilledKeys.has(dailyDrillStudentKey(student.branch, student.name)));
+      const grouped = groupDailyMissingStudents(missingStudents);
+      $("dailyMissingDrillCount").textContent = `${numberFmt.format(missingStudents.length)} siswa`;
+      $("dailyMissingDrillSummary").innerHTML = renderDailyMissingSummary(activeTargetStudents.length, missingStudents.length, selectedDate);
+      $("dailyMissingDrillGroups").innerHTML = grouped.length
+        ? grouped.map(renderDailyMissingBranch).join("")
+        : `<div class="empty">Semua siswa target sudah drill pada ${escapeHtml(safeFormatLongDate(selectedDate))}.</div>`;
+    }
+
+    function dailyDrillStudentKey(branch, student) {
+      return `${normalizeLookup(branch)}|${normalizeLookup(student)}`;
+    }
+
+    function groupDailyMissingStudents(students) {
+      const gradeOrder = ["6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
+      const byBranch = new Map();
+      students.forEach((student) => {
+        const branch = student.branch || "-";
+        const grade = gradeFromClass(student.class) || "-";
+        if (!byBranch.has(branch)) byBranch.set(branch, { branch, count: 0, grades: new Map() });
+        const branchItem = byBranch.get(branch);
+        branchItem.count += 1;
+        if (!branchItem.grades.has(grade)) branchItem.grades.set(grade, []);
+        branchItem.grades.get(grade).push(student);
+      });
+      return [...byBranch.values()]
+        .sort((a, b) => a.branch.localeCompare(b.branch, "id"))
+        .map((branchItem) => ({
+          ...branchItem,
+          grades: [...branchItem.grades.entries()]
+            .map(([grade, items]) => ({ grade, items: items.sort((a, b) => a.name.localeCompare(b.name, "id")) }))
+            .sort((a, b) => (gradeOrder.indexOf(a.grade) < 0 ? 99 : gradeOrder.indexOf(a.grade)) - (gradeOrder.indexOf(b.grade) < 0 ? 99 : gradeOrder.indexOf(b.grade)))
+        }));
+    }
+
+    function renderDailyMissingSummary(activeCount, missingCount, selectedDate) {
+      const drilledCount = Math.max(0, activeCount - missingCount);
+      const percent = activeCount ? Math.round((missingCount / activeCount) * 100) : 0;
+      return [
+        { label: "Target Aktif", value: numberFmt.format(activeCount) },
+        { label: "Sudah Drill", value: numberFmt.format(drilledCount) },
+        { label: "Belum Drill", value: `${numberFmt.format(missingCount)} (${percent}%)` }
+      ].map((item) => `<div class="daily-missing-card ${escapeHtml(item.className || "")}"><div class="daily-missing-label">${escapeHtml(item.label)}</div><div class="daily-missing-value">${escapeHtml(item.value)}</div></div>`).join("");
+    }
+
+    function renderDailyMissingBranch(branchItem) {
+      const selectedGrade = selectedDailyMissingGradeByBranch.get(branchItem.branch) || "";
+      const selectedGradeItem = branchItem.grades.find((gradeItem) => gradeItem.grade === selectedGrade) || branchItem.grades[0] || { grade: "", items: [] };
+      return `<details class="daily-branch" open>
+        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" onclick="event.stopPropagation()"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
+        <div class="daily-grade-row">
+          ${branchItem.grades.map((gradeItem) => `<button type="button" class="daily-grade-toggle ${gradeItem.grade === selectedGrade ? "active" : ""}" data-daily-branch="${escapeHtml(branchItem.branch)}" data-daily-grade="${escapeHtml(gradeItem.grade)}"><span>${escapeHtml(gradeItem.grade)}</span><span class="daily-grade-count">${numberFmt.format(gradeItem.items.length)}</span></button>`).join("")}
+        </div>
+        ${selectedGrade ? `<div class="daily-student-table-wrap">
+          <table class="daily-student-table">
+            <thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Sekolah</th></tr></thead>
+            <tbody>
+              ${selectedGradeItem.items.map((student) => `<tr><td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.class)}</td><td>${escapeHtml(studentSchoolName(student) || "-")}</td></tr>`).join("") || `<tr><td colspan="3" class="empty">Tidak ada siswa pada jenjang ini.</td></tr>`}
+            </tbody>
+          </table>
+        </div>` : ""}
+      </details>`;
     }
 
     function renderLeaderboardMeta(item) {
