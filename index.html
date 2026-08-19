@@ -681,6 +681,7 @@
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
+    const DRILL_MENU_DATE = offsetIsoDate(DASHBOARD_MIN_TODAY, -1);
     const USE_NETLIFY_PROXY = location.hostname.includes("netlify");
     let appsScriptDataPromise = null;
     let data = normalizeData(window.ATTENDANCE_DATA || { students: [], weeks: [], studentWeeks: [], records: [] });
@@ -704,7 +705,7 @@
       let drillMode = "student";
       let selectedDrillGrade = "12 SMA";
       let inactiveDrillStatusFilter = "";
-      let selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
+      let selectedDailyMissingDrillDate = DRILL_MENU_DATE;
       let selectedDailyMissingGradeByBranch = new Map();
       let selectedDailyMissingClassByBranchGrade = new Map();
       let byId = new Map();
@@ -806,6 +807,12 @@
       return localDate.toISOString().slice(0, 10);
     }
 
+    function offsetIsoDate(isoDate, dayOffset) {
+      const date = new Date(`${isoDate}T00:00:00`);
+      date.setDate(date.getDate() + dayOffset);
+      return localIsoDate(date);
+    }
+
     function init() {
       initAccessGate();
       const restoredAttendance = restoreLiveData();
@@ -835,7 +842,7 @@
         $(id).addEventListener("change", handleDrillFilterInput);
       });
       $("dailyMissingDrillDate").addEventListener("change", () => {
-        selectedDailyMissingDrillDate = $("dailyMissingDrillDate").value || DASHBOARD_MIN_TODAY;
+        selectedDailyMissingDrillDate = normalizeDailyMissingDate($("dailyMissingDrillDate").value);
         renderDailyMissingDrill();
       });
       $("dailyMissingDrillGroups").addEventListener("click", (event) => {
@@ -3724,7 +3731,8 @@
     function renderDailyMissingDrill() {
       const dateInput = $("dailyMissingDrillDate");
       if (!dateInput) return;
-      if (!selectedDailyMissingDrillDate) selectedDailyMissingDrillDate = DASHBOARD_MIN_TODAY;
+      selectedDailyMissingDrillDate = normalizeDailyMissingDate(selectedDailyMissingDrillDate);
+      dateInput.max = DRILL_MENU_DATE;
       if (dateInput.value !== selectedDailyMissingDrillDate) dateInput.value = selectedDailyMissingDrillDate;
       const selectedClass = $("drillClassSelect").value;
       $("dailyMissingDrillPanel").hidden = Boolean(selectedClass);
@@ -3793,7 +3801,7 @@
       const classOptions = selectedGradeItem.items.length ? [...new Set(selectedGradeItem.items.map((student) => student.class).filter(Boolean))].sort(compareClass) : [];
       const visibleStudents = selectedGrade ? selectedGradeItem.items.filter((student) => !selectedClass || student.class === selectedClass) : [];
       return `<details class="daily-branch" open>
-        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" onclick="event.stopPropagation()" onchange="setDailyMissingDate(this.value || '')"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
+        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" max="${escapeHtml(DRILL_MENU_DATE)}" onclick="event.stopPropagation()" onchange="setDailyMissingDate(this.value || '')"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
         <div class="daily-grade-row">
           ${branchItem.grades.map((gradeItem) => `<button type="button" class="daily-grade-toggle ${gradeItem.grade === selectedGrade ? "active" : ""}" data-daily-branch="${escapeHtml(branchItem.branch)}" data-daily-grade="${escapeHtml(gradeItem.grade)}"><span>${escapeHtml(gradeItem.grade)}</span><span class="daily-grade-count">${numberFmt.format(gradeItem.items.length)}</span></button>`).join("")}
         </div>
@@ -3824,8 +3832,14 @@
     }
 
     function setDailyMissingDate(value) {
-      selectedDailyMissingDrillDate = value || DASHBOARD_MIN_TODAY;
+      selectedDailyMissingDrillDate = normalizeDailyMissingDate(value);
       renderDailyMissingDrill();
+    }
+
+    function normalizeDailyMissingDate(value) {
+      const date = String(value || "").trim();
+      if (!date || date > DRILL_MENU_DATE) return DRILL_MENU_DATE;
+      return date;
     }
 
     function renderLeaderboardMeta(item) {
@@ -3986,7 +4000,7 @@
       }, 0);
     }
 
-    function countDateRangeUntilToday(startDate, today = DASHBOARD_MIN_TODAY) {
+    function countDateRangeUntilToday(startDate, today = DRILL_MENU_DATE) {
       if (!startDate || startDate > today) return 0;
       let count = 0;
       const current = new Date(`${startDate}T00:00:00`);
@@ -4034,15 +4048,15 @@
     }
 
     function drillVisibleDates(month, week, rows) {
-      if (week) return drillWeekRange(month, week);
+      if (week) return drillWeekRange(month, week).filter((date) => date <= DRILL_MENU_DATE);
       if (month) {
         const periods = data.weeks
           .filter((item) => sameDrillMonth(item.month, month))
           .sort(comparePeriod);
         const dates = periods.flatMap((period) => drillWeekRange(period.month, period.week));
-        return [...new Set(dates)].sort();
+        return [...new Set(dates)].filter((date) => date <= DRILL_MENU_DATE).sort();
       }
-      return [...new Set(rows.map((row) => row.date))].sort();
+      return [...new Set(rows.map((row) => row.date))].filter((date) => date <= DRILL_MENU_DATE).sort();
     }
 
     function drillWeekRange(month, week) {
@@ -4262,7 +4276,7 @@
       return dateRangeUntilToday(startDates[0] || "2026-07-13");
     }
 
-    function dateRangeUntilToday(startDate, today = DASHBOARD_MIN_TODAY) {
+    function dateRangeUntilToday(startDate, today = DRILL_MENU_DATE) {
       if (!startDate || startDate > today) return [];
       const dates = [];
       const current = new Date(`${startDate}T00:00:00`);
