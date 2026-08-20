@@ -358,6 +358,8 @@
     .top-performer-leaderboard .leaderboard-score { min-width: 82px; min-height: 48px; justify-content: center; justify-self: end; padding: 0 14px; border: 1px solid currentColor; border-radius: 8px; font-size: 30px; background: rgba(255,255,255,0.7); box-shadow: inset 0 1px 0 rgba(255,255,255,0.72); }
     .daily-missing-panel .panel-head { background: linear-gradient(135deg, #fbfdff 0%, #eef8fd 100%); }
     .daily-missing-body { display: grid; gap: 14px; padding: 14px; align-items: start; }
+    .daily-missing-date-filter { display: inline-grid; gap: 4px; min-width: 180px; color: var(--muted); font-size: 10px; font-weight: 900; }
+    .daily-missing-date-filter input { height: 34px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 10px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; font-weight: 850; }
     .daily-missing-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
     .daily-missing-controls label { display: grid; gap: 5px; color: #64748b; font-size: 12px; font-weight: 900; }
     .daily-missing-controls input { width: 220px; height: 40px; border: 1px solid #cfe0ec; border-radius: 8px; padding: 0 12px; color: var(--ink); background: #fff; font: inherit; font-weight: 850; }
@@ -384,6 +386,15 @@
     .daily-student-table th { padding: 10px 12px; color: #64748b; background: #f0f8fc; font-size: 11px; font-weight: 950; text-transform: uppercase; text-align: left; }
     .daily-student-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); background: #fff; font-size: 13px; }
     .daily-student-table td:first-child { color: var(--ink); font-weight: 500; }
+    .daily-branch-summary-wrap { overflow: auto; }
+    .daily-branch-summary { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0; }
+    .daily-branch-summary th { padding: 11px 12px; color: #64748b; background: #f0f8fc; font-size: 11px; font-weight: 950; text-transform: uppercase; text-align: center; }
+    .daily-branch-summary th:first-child { text-align: left; }
+    .daily-branch-summary td { padding: 12px; border-bottom: 1px solid var(--line); background: #fff; font-size: 13px; text-align: center; }
+    .daily-branch-summary td:first-child { color: var(--ink); font-weight: 800; text-align: left; }
+    .daily-branch-summary .missing { color: var(--red); font-weight: 900; }
+    .daily-branch-summary .drilled { color: var(--green); font-weight: 900; }
+    .daily-branch-summary .rate { color: var(--blue-dark); font-weight: 900; }
     .detail-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 16px; }
     .detail-item { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fbfdff; }
     .detail-item.actionable { text-align: left; cursor: pointer; }
@@ -600,10 +611,14 @@
       <div class="panel daily-missing-panel" id="dailyMissingDrillPanel">
         <div class="panel-head">
           <h2>Siswa Belum Drill per Tanggal</h2>
-          <span class="pill" id="dailyMissingDrillCount">0 siswa</span>
+          <div class="table-tools">
+            <label class="daily-missing-date-filter">Tanggal
+              <input id="dailyMissingDrillDate" type="date">
+            </label>
+            <span class="pill" id="dailyMissingDrillCount">0 siswa</span>
+          </div>
         </div>
         <div class="daily-missing-body">
-          <input id="dailyMissingDrillDate" type="date" hidden>
           <div class="daily-missing-summary" id="dailyMissingDrillSummary"></div>
           <div class="daily-missing-groups" id="dailyMissingDrillGroups"></div>
         </div>
@@ -847,6 +862,13 @@
       });
       $("dailyMissingDrillGroups").addEventListener("click", (event) => {
         if (event.target.closest("[data-daily-date], [data-daily-class]")) return;
+        const allBranchGradeButton = event.target.closest("[data-daily-all-grade]");
+        if (allBranchGradeButton) {
+          const grade = allBranchGradeButton.dataset.dailyAllGrade || "";
+          selectedDailyMissingGradeByBranch.set("__all__", selectedDailyMissingGradeByBranch.get("__all__") === grade ? "" : grade);
+          renderDailyMissingDrill();
+          return;
+        }
         const button = event.target.closest("[data-daily-grade]");
         if (!button) return;
         const branch = button.dataset.dailyBranch || "";
@@ -3743,6 +3765,7 @@
       const activeTargetStudents = data.students
         .filter((student) => isActiveStudent(student) && hasDrillTarget(student.class))
         .filter((student) => !selectedBranch || student.branch === selectedBranch)
+        .filter((student) => selectedBranch || student.branch)
         .filter((student) => selectedBranch || !selectedRegional || branchRegion(student.branch) === selectedRegional)
         .filter((student) => isStudentTargetDate(student.name, selectedDate));
       const drilledKeys = new Set(drillData
@@ -3753,9 +3776,11 @@
       const grouped = groupDailyMissingStudents(missingStudents);
       $("dailyMissingDrillCount").textContent = `${numberFmt.format(missingStudents.length)} siswa`;
       $("dailyMissingDrillSummary").innerHTML = renderDailyMissingSummary(activeTargetStudents.length, missingStudents.length, selectedDate);
-      $("dailyMissingDrillGroups").innerHTML = grouped.length
-        ? grouped.map(renderDailyMissingBranch).join("")
-        : `<div class="empty">Semua siswa target sudah drill pada ${escapeHtml(safeFormatLongDate(selectedDate))}.</div>`;
+      $("dailyMissingDrillGroups").innerHTML = selectedBranch
+        ? grouped.length
+          ? grouped.map(renderDailyMissingBranch).join("")
+          : `<div class="empty">Semua siswa target sudah drill pada ${escapeHtml(safeFormatLongDate(selectedDate))}.</div>`
+        : renderDailyMissingAllBranches(activeTargetStudents, missingStudents);
     }
 
     function dailyDrillStudentKey(branch, student) {
@@ -3801,7 +3826,7 @@
       const classOptions = selectedGradeItem.items.length ? [...new Set(selectedGradeItem.items.map((student) => student.class).filter(Boolean))].sort(compareClass) : [];
       const visibleStudents = selectedGrade ? selectedGradeItem.items.filter((student) => !selectedClass || student.class === selectedClass) : [];
       return `<details class="daily-branch" open>
-        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span><span class="daily-branch-date"><input type="date" data-daily-date value="${escapeHtml(selectedDailyMissingDrillDate)}" max="${escapeHtml(DRILL_MENU_DATE)}" onclick="event.stopPropagation()" onchange="setDailyMissingDate(this.value || '')"></span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
+        <summary><span class="daily-branch-title"><span>${escapeHtml(branchItem.branch)}</span></span><span class="daily-branch-count">${numberFmt.format(branchItem.count)} siswa belum drill</span></summary>
         <div class="daily-grade-row">
           ${branchItem.grades.map((gradeItem) => `<button type="button" class="daily-grade-toggle ${gradeItem.grade === selectedGrade ? "active" : ""}" data-daily-branch="${escapeHtml(branchItem.branch)}" data-daily-grade="${escapeHtml(gradeItem.grade)}"><span>${escapeHtml(gradeItem.grade)}</span><span class="daily-grade-count">${numberFmt.format(gradeItem.items.length)}</span></button>`).join("")}
         </div>
@@ -3820,6 +3845,44 @@
           </table>
         </div>` : ""}
       </details>`;
+    }
+
+    function renderDailyMissingAllBranches(activeStudents, missingStudents) {
+      const selectedGrade = selectedDailyMissingGradeByBranch.get("__all__") || "";
+      const gradeOrder = ["6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
+      const gradeItems = gradeOrder.map((grade) => ({
+        grade,
+        items: activeStudents.filter((student) => gradeFromClass(student.class) === grade),
+        missingItems: missingStudents.filter((student) => gradeFromClass(student.class) === grade)
+      })).filter((item) => item.items.length);
+      const selectedStudents = activeStudents.filter((student) => gradeFromClass(student.class) === selectedGrade);
+      const activeByBranch = new Map();
+      selectedStudents.forEach((student) => {
+        const branch = student.branch || "-";
+        if (!activeByBranch.has(branch)) activeByBranch.set(branch, []);
+        activeByBranch.get(branch).push(student);
+      });
+      const missingKeys = new Set(missingStudents.map((student) => dailyDrillStudentKey(student.branch, student.name)));
+      const rows = [...activeByBranch.entries()]
+        .map(([branch, students]) => {
+          const missingCount = students.filter((student) => missingKeys.has(dailyDrillStudentKey(student.branch, student.name))).length;
+          const drilledCount = Math.max(0, students.length - missingCount);
+          return { branch, total: students.length, drilled: drilledCount, missing: missingCount, percent: students.length ? Math.round((drilledCount / students.length) * 100) : 0 };
+        })
+        .sort((a, b) => a.branch.localeCompare(b.branch, "id"));
+      return `<div class="daily-all-branches">
+        <div class="daily-grade-row">
+          ${gradeItems.map((item) => `<button type="button" class="daily-grade-toggle ${item.grade === selectedGrade ? "active" : ""}" data-daily-all-grade="${escapeHtml(item.grade)}"><span>${escapeHtml(item.grade)}</span><span class="daily-grade-count">${numberFmt.format(item.missingItems.length)}</span></button>`).join("") || `<div class="empty">Tidak ada siswa target pada tanggal ini.</div>`}
+        </div>
+        ${selectedGrade ? `<div class="daily-branch-summary-wrap">
+          <table class="daily-branch-summary">
+            <thead><tr><th>Nama Cabang</th><th>#Siswa</th><th>#Sudah Drill</th><th>#Belum Drill</th><th>#%Drill</th></tr></thead>
+            <tbody>
+              ${rows.map((row) => `<tr><td>${escapeHtml(row.branch)}</td><td>${numberFmt.format(row.total)}</td><td class="drilled">${numberFmt.format(row.drilled)}</td><td class="missing">${numberFmt.format(row.missing)}</td><td class="rate">${row.percent}%</td></tr>`).join("") || `<tr><td colspan="5" class="empty">Tidak ada data kelas ${escapeHtml(selectedGrade)}.</td></tr>`}
+            </tbody>
+          </table>
+        </div>` : ""}
+      </div>`;
     }
 
     function dailyMissingClassFilterKey(branch, grade) {
