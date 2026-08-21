@@ -5149,7 +5149,9 @@
         const total = row?.total || 0;
         return { date: activeDate, target, correct, wrong, blank, total, percent: target ? Math.round((correct / target) * 100) : 0 };
       }) : [];
-      const title = selectedStudentRecord ? `Rekap Drill ${selectedStudentRecord.name}` : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
+      const title = selectedStudentRecord
+        ? `Rekap Drill ${selectedStudentRecord.name}`
+        : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
       const subtitle = `${selectedMonth || "Semua month"}${selectedWeek ? ` - ${selectedWeek}` : " - Semua week"} | ${activeDates.length > 1 ? `${numberFmt.format(activeDates.length)} tanggal` : safeFormatLongDate(activeDates[0])}`;
       const printWindow = window.open("", "_blank");
       if (!printWindow) {
@@ -5203,7 +5205,7 @@
             <div class="box"><div class="box-label">Salah</div><div class="box-value wrong">${numberFmt.format(totals.wrong)}</div></div>
             <div class="box"><div class="box-label">Blank</div><div class="box-value blank">${numberFmt.format(totals.blank)}</div></div>
             <div class="box"><div class="box-label">Total</div><div class="box-value">${numberFmt.format(totals.total)}</div></div>
-            <div class="box"><div class="box-label">% Benar</div><div class="box-value percent">${totals.target ? Math.round((totals.correct / totals.target) * 100) : 0}%</div></div>
+            <div class="box"><div class="box-label">% Ach</div><div class="box-value percent">${totals.target ? Math.round((totals.correct / totals.target) * 100) : 0}%</div></div>
           </div>
           <table>
             <thead><tr><th>Nama</th><th>Kelas</th><th>Target</th><th>Benar</th><th>Salah</th><th>Blank</th><th>Total</th><th>% Benar</th></tr></thead>
@@ -5270,17 +5272,23 @@
         const total = row?.total || 0;
         return { date: activeDate, target, correct, wrong, blank, total, percent: target ? Math.round((correct / target) * 100) : 0 };
       }) : [];
-      const title = selectedStudentRecord ? `Rekap Drill ${selectedStudentRecord.name}` : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
+      const title = selectedStudentRecord
+        ? `Detail Drill Siswa - ${numberFmt.format(activeDates.length)} tanggal`
+        : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
       const subtitle = `${selectedMonth || "Semua month"}${selectedWeek ? ` - ${selectedWeek}` : " - Semua week"} | ${activeDates.length > 1 ? `${numberFmt.format(activeDates.length)} tanggal` : safeFormatLongDate(activeDates[0])}`;
+      const insight = selectedStudent
+        ? buildDrillImageInsight(selectedStudentRecord || findSelectedDrillStudent(selectedStudent), activeDates, rows, displayRows[0])
+        : null;
       const rowHeight = 50;
       const headerHeight = 250;
       const summaryHeight = 126;
       const tableHeaderHeight = 60;
       const sectionGap = dateBreakdownRows.length ? 70 : 28;
       const detailTableHeight = dateBreakdownRows.length ? tableHeaderHeight + (dateBreakdownRows.length * rowHeight) + 18 : 0;
+      const insightHeight = insight ? 470 : 0;
       const canvas = document.createElement("canvas");
       canvas.width = 1600;
-      canvas.height = Math.max(720, headerHeight + summaryHeight + tableHeaderHeight + (displayRows.length * rowHeight) + sectionGap + detailTableHeight);
+      canvas.height = Math.max(720, headerHeight + summaryHeight + insightHeight + tableHeaderHeight + (displayRows.length * rowHeight) + sectionGap + detailTableHeight);
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -5367,18 +5375,23 @@
       ctx.lineTo(canvas.width - pad, 148);
       ctx.stroke();
 
+      const widths = [500, 260, 120, 120, 120, 100, 140, 140];
       const boxGap = 10;
       const boxWidth = (contentWidth - (boxGap * 5)) / 6;
-      const summaryY = 172;
+      let tableY = 172;
+      if (insight) {
+        drawDrillImageInsight(ctx, insight, pad, tableY, contentWidth, colors);
+        tableY += insightHeight;
+      }
+      tableY += 20;
+      const summaryY = tableY;
       drawCell(pad, summaryY, boxWidth, 96, colors.panel, "Target", totals.target, colors.muted);
       drawCell(pad + (boxWidth + boxGap), summaryY, boxWidth, 96, "#ecfdf5", "Benar", totals.correct, colors.correct);
       drawCell(pad + ((boxWidth + boxGap) * 2), summaryY, boxWidth, 96, "#fef2f2", "Salah", totals.wrong, colors.wrong);
       drawCell(pad + ((boxWidth + boxGap) * 3), summaryY, boxWidth, 96, "#f5f3ff", "Blank", totals.blank, colors.blank);
       drawCell(pad + ((boxWidth + boxGap) * 4), summaryY, boxWidth, 96, colors.panel, "Total", totals.total, colors.ink);
-      drawCell(pad + ((boxWidth + boxGap) * 5), summaryY, boxWidth, 96, "#fff7ed", "% Benar", totals.target ? Math.round((totals.correct / totals.target) * 100) : 0, colors.percent, "%");
-
-      const widths = [500, 260, 120, 120, 120, 100, 140, 140];
-      let tableY = 330;
+      drawCell(pad + ((boxWidth + boxGap) * 5), summaryY, boxWidth, 96, "#fff7ed", "% Ach", totals.target ? Math.round((totals.correct / totals.target) * 100) : 0, colors.percent, "%");
+      tableY += 126;
       drawTableHeader(tableY, ["Nama", "Kelas", "Target", "Benar", "Salah", "Blank", "Total", "% Benar"], widths);
       tableY += tableHeaderHeight;
       displayRows.forEach((row) => {
@@ -5435,6 +5448,241 @@
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error(`Gagal memuat ${source}`));
         image.src = source;
+      });
+    }
+
+    function buildDrillImageInsight(student, dates, rows, displayRow) {
+      if (!student) return null;
+      const activeDateSet = new Set(rows.map((row) => row.date).filter(Boolean));
+      const activeDayCount = dates.filter((date) => activeDateSet.has(date)).length;
+      const emptyDayCount = Math.max(0, dates.length - activeDayCount);
+      const target = displayRow?.target || 0;
+      const correct = displayRow?.correct || 0;
+      const total = displayRow?.total || 0;
+      const wrong = displayRow?.wrong || 0;
+      const blank = displayRow?.blank || 0;
+      const targetPercent = target ? Math.round((correct / target) * 100) : 0;
+      const accuracy = total ? Math.round((correct / total) * 100) : 0;
+      const rank = studentDrillRank(student, dates);
+      const status = studentDrillStatus(targetPercent, total, emptyDayCount, dates.length);
+      const points = new Map(dates.map((date) => [date, { date, target: drillTarget(student.class), correct: 0, total: 0 }]));
+      rows.forEach((row) => {
+        const point = points.get(row.date);
+        if (!point) return;
+        point.correct += row.correct || 0;
+        point.total += row.total || 0;
+      });
+      const allPoints = [...points.values()];
+      const compactPoints = allPoints.length > 18
+        ? allPoints.filter((_, index) => index % Math.ceil(allPoints.length / 18) === 0 || index === allPoints.length - 1)
+        : allPoints;
+      let runningCorrect = 0;
+      let runningTarget = 0;
+      const trend = compactPoints.map((point) => {
+        runningCorrect += point.correct;
+        runningTarget += point.target;
+        return runningTarget ? Math.round((runningCorrect / runningTarget) * 100) : 0;
+      });
+      return {
+        student,
+        dates,
+        target,
+        correct,
+        wrong,
+        blank,
+        total,
+        targetPercent,
+        accuracy,
+        activeDayCount,
+        emptyDayCount,
+        average: dates.length ? total / dates.length : 0,
+        rank,
+        status,
+        paidLabel: student.paidDate ? formatPaidDate(student.paidDate) : "-",
+        latestDate: [...activeDateSet].sort().at(-1) || "-",
+        points: compactPoints,
+        trend
+      };
+    }
+
+    function drawDrillImageInsight(ctx, insight, x, y, width, colors) {
+      const gap = 12;
+      const cardHeight = 116;
+      const label = (text, left, top, color = colors.muted) => {
+        ctx.font = "700 15px Arial, sans-serif";
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.fillText(text, left, top);
+      };
+      const value = (text, left, top, color = colors.ink, size = 25) => {
+        ctx.font = `800 ${size}px Arial, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = "left";
+        ctx.fillText(text, left, top);
+      };
+      const card = (left, top, cardWidth, cardFill = "#fff", cardHeightOverride = cardHeight) => {
+        ctx.fillStyle = cardFill;
+        ctx.strokeStyle = colors.line;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(left, top, cardWidth, cardHeightOverride, 12);
+        ctx.fill();
+        ctx.stroke();
+      };
+      const profileHeight = 154;
+      card(x, y, width, "#F58220", profileHeight);
+      label("SISWA", x + 18, y + 24, "#fff7ed");
+      value(insight.student.name, x + 18, y + 60, "#ffffff", 30);
+      value(`${insight.student.class || "-"} · ${insight.student.branch || "-"}`, x + 18, y + 98, "#fff7ed", 17);
+      value(`Paydate ${insight.paidLabel}`, x + 18, y + 128, "#fff7ed", 16);
+
+      const metricY = y + profileHeight + gap;
+      const metricWidth = (width - (gap * 3)) / 4;
+      const metricItems = [
+        { label: "POSISI", value: insight.rank.rank ? `#${numberFmt.format(insight.rank.rank)}` : "-", sub: `${numberFmt.format(insight.rank.total)} siswa · ${insight.rank.percent}%`, color: colors.ink, fill: "#f8fafc" },
+        { label: "HARI AKTIF", value: `${numberFmt.format(insight.activeDayCount)} / ${numberFmt.format(insight.dates.length)}`, sub: `${numberFmt.format(insight.emptyDayCount)} kosong`, color: colors.ink, fill: "#f8fafc" },
+        { label: "RATA-RATA", value: insight.average.toLocaleString("id-ID", { maximumFractionDigits: 1 }), sub: `soal/hari · ${insight.accuracy}% akurasi`, color: colors.ink, fill: "#f8fafc" },
+        { label: "STATUS", value: insight.status.label, sub: insight.latestDate === "-" ? "-" : safeFormatLongDate(insight.latestDate), color: insight.status.kind === "good" ? "#047857" : insight.status.kind === "warn" ? "#b45309" : "#b91c1c", fill: insight.status.kind === "good" ? "#ecfdf5" : insight.status.kind === "warn" ? "#fff7ed" : "#fef2f2" }
+      ];
+      metricItems.forEach((item, index) => {
+        const left = x + ((metricWidth + gap) * index);
+        card(left, metricY, metricWidth, item.fill);
+        label(item.label, left + 16, metricY + 26);
+        value(item.value, left + 16, metricY + 62, item.color, item.label === "STATUS" ? 20 : 27);
+        value(item.sub, left + 16, metricY + 94, colors.muted, 15);
+      });
+
+      const chartY = metricY + cardHeight + gap;
+      const chartHeight = 190;
+      const chartWidth = (width - (gap * 2)) / 3;
+      const chartLabels = insight.points.map((point) => `${point.date.slice(8)}/${point.date.slice(5, 7)}`);
+      drawDrillImageChart(ctx, x, chartY, chartWidth, chartHeight, "TARGET VS TOTAL", insight.points.map((point) => point.target), insight.points.map((point) => point.total), colors, false, chartLabels);
+      drawDrillImageDonut(ctx, x + chartWidth + gap, chartY, chartWidth, chartHeight, insight, colors);
+      drawDrillImageChart(ctx, x + ((chartWidth + gap) * 2), chartY, chartWidth, chartHeight, "TREND CAPAIAN TARGET", insight.trend, null, colors, true, chartLabels);
+    }
+
+    function drawDrillImageChart(ctx, x, y, width, height, title, values, secondaryValues, colors, percent = false, labels = []) {
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = colors.line;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "800 15px Arial, sans-serif";
+      ctx.fillStyle = colors.muted;
+      ctx.textAlign = "left";
+      ctx.fillText(title, x + 16, y + 24);
+      const left = x + 42;
+      const right = x + width - 16;
+      const top = y + 42;
+      const bottom = y + height - 28;
+      const maxValue = percent ? 100 : Math.max(10, ...values, ...(secondaryValues || []));
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 1;
+      for (let index = 0; index <= 4; index += 1) {
+        const lineY = top + ((bottom - top) * index / 4);
+        ctx.beginPath();
+        ctx.moveTo(left, lineY);
+        ctx.lineTo(right, lineY);
+        ctx.stroke();
+      }
+      const pointX = (index) => values.length === 1 ? (left + right) / 2 : left + ((right - left) * index / (values.length - 1));
+      const pointY = (value) => bottom - ((Math.max(0, value) / maxValue) * (bottom - top));
+      if (secondaryValues) {
+        const barWidth = Math.max(8, Math.min(24, (right - left) / Math.max(values.length * 2, 1)));
+        values.forEach((value, index) => {
+          const barX = pointX(index) - barWidth / 2;
+          const barY = pointY(value);
+          ctx.fillStyle = "#10B981";
+          ctx.beginPath();
+          ctx.roundRect(barX, barY, barWidth, bottom - barY, 5);
+          ctx.fill();
+        });
+        ctx.strokeStyle = "#F58220";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        secondaryValues.forEach((value, index) => {
+          const px = pointX(index);
+          const py = pointY(value);
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "rgba(0, 127, 199, 0.12)";
+        ctx.strokeStyle = "#007fc7";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        values.forEach((value, index) => {
+          const px = pointX(index);
+          const py = pointY(value);
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.lineTo(pointX(values.length - 1), bottom);
+        ctx.lineTo(pointX(0), bottom);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.font = "600 12px Arial, sans-serif";
+      ctx.fillStyle = colors.muted;
+      ctx.textAlign = "center";
+      values.forEach((value, index) => {
+        if (values.length > 10 && index % Math.ceil(values.length / 5) !== 0 && index !== values.length - 1) return;
+        ctx.fillText(labels[index] || "", pointX(index), y + height - 10);
+      });
+      ctx.textAlign = "right";
+      ctx.fillText(percent ? "100%" : numberFmt.format(maxValue), left - 6, top + 4);
+      ctx.fillText("0", left - 6, bottom + 4);
+    }
+
+    function drawDrillImageDonut(ctx, x, y, width, height, insight, colors) {
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = colors.line;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "800 15px Arial, sans-serif";
+      ctx.fillStyle = colors.muted;
+      ctx.textAlign = "left";
+      ctx.fillText("BENAR / SALAH / BLANK", x + 16, y + 24);
+      const total = Math.max(1, insight.correct + insight.wrong + insight.blank);
+      const centerX = x + width / 2;
+      const centerY = y + 100;
+      const radius = 58;
+      let startAngle = -Math.PI / 2;
+      [
+        { value: insight.correct, color: colors.correct },
+        { value: insight.wrong, color: colors.wrong },
+        { value: insight.blank, color: colors.blank }
+      ].forEach((item) => {
+        const angle = (item.value / total) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, startAngle + angle);
+        ctx.closePath();
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        startAngle += angle;
+      });
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 32, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.font = "700 13px Arial, sans-serif";
+      ctx.textAlign = "left";
+      [
+        ["Benar", insight.correct, colors.correct],
+        ["Salah", insight.wrong, colors.wrong],
+        ["Blank", insight.blank, colors.blank]
+      ].forEach((item, index) => {
+        const legendX = x + 18 + (index * ((width - 36) / 3));
+        ctx.fillStyle = item[2];
+        ctx.fillRect(legendX, y + height - 26, 12, 12);
+        ctx.fillStyle = colors.muted;
+        ctx.fillText(`${item[0]} ${numberFmt.format(item[1])}`, legendX + 18, y + height - 16);
       });
     }
 
