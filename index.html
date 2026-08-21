@@ -5227,7 +5227,7 @@
       printWindow.document.close();
     }
 
-    function downloadDrillImage() {
+    async function downloadDrillImage() {
       const selectedStudent = drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "";
       const selectedStudentRecord = findSelectedDrillStudent(selectedStudent);
       const selectedClass = drillMode === "student" ? (selectedStudentRecord?.class || "") : $("drillClassSelect").value;
@@ -5272,14 +5272,14 @@
       }) : [];
       const title = selectedStudentRecord ? `Rekap Drill ${selectedStudentRecord.name}` : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
       const subtitle = `${selectedMonth || "Semua month"}${selectedWeek ? ` - ${selectedWeek}` : " - Semua week"} | ${activeDates.length > 1 ? `${numberFmt.format(activeDates.length)} tanggal` : safeFormatLongDate(activeDates[0])}`;
-      const rowHeight = 34;
-      const headerHeight = 210;
-      const summaryHeight = 112;
-      const tableHeaderHeight = 42;
+      const rowHeight = 50;
+      const headerHeight = 250;
+      const summaryHeight = 126;
+      const tableHeaderHeight = 60;
       const sectionGap = dateBreakdownRows.length ? 70 : 28;
       const detailTableHeight = dateBreakdownRows.length ? tableHeaderHeight + (dateBreakdownRows.length * rowHeight) + 18 : 0;
       const canvas = document.createElement("canvas");
-      canvas.width = 1800;
+      canvas.width = 1600;
       canvas.height = Math.max(720, headerHeight + summaryHeight + tableHeaderHeight + (displayRows.length * rowHeight) + sectionGap + detailTableHeight);
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#ffffff";
@@ -5315,8 +5315,8 @@
         ctx.roundRect(x, y, width, height, 10);
         ctx.fill();
         ctx.stroke();
-        drawText(label, x + 14, y + 22, 15, colors.muted, 700);
-        drawText(`${numberFmt.format(value)}${suffix}`, x + 14, y + 66, 25, valueColor, 800);
+        drawText(label, x + 16, y + 27, 19, colors.muted, 700);
+        drawText(`${numberFmt.format(value)}${suffix}`, x + 16, y + 82, 33, valueColor, 800);
       };
       const drawTableHeader = (y, headers, widths) => {
         let x = pad;
@@ -5326,27 +5326,41 @@
           ctx.fillRect(x, y, width, tableHeaderHeight);
           ctx.strokeStyle = colors.line;
           ctx.strokeRect(x, y, width, tableHeaderHeight);
-          drawText(header, index < 2 ? x + 12 : x + width / 2, y + tableHeaderHeight / 2, 14, colors.muted, 800, index < 2 ? "left" : "center");
+          drawText(header, index < 2 ? x + 14 : x + width / 2, y + tableHeaderHeight / 2, 18, colors.muted, 800, index < 2 ? "left" : "center");
           x += width;
         });
       };
-      const drawTableRow = (y, values, widths, valueColors = []) => {
+      const drawTableRow = (y, values, widths, valueColors = [], rowFill = "#ffffff") => {
         let x = pad;
         values.forEach((value, index) => {
           const width = widths[index];
-          ctx.fillStyle = "#ffffff";
+          ctx.fillStyle = rowFill;
+          ctx.fillRect(x, y, width, rowHeight);
           ctx.strokeStyle = colors.line;
           ctx.strokeRect(x, y, width, rowHeight);
-          drawText(value, index < 2 ? x + 12 : x + width / 2, y + rowHeight / 2, 14, valueColors[index] || colors.ink, index < 2 ? 600 : 700, index < 2 ? "left" : "center");
+          drawText(value, index < 2 ? x + 14 : x + width / 2, y + rowHeight / 2, 18, valueColors[index] || colors.ink, index < 2 ? 600 : 700, index < 2 ? "left" : "center");
           x += width;
         });
       };
 
+      let logoImage = null;
+      try {
+        logoImage = await loadExportImage("ruangguru-logo.svg");
+      } catch (error) {
+        console.warn("Logo PNG gagal dimuat:", error);
+      }
+
       ctx.fillStyle = colors.teal;
       ctx.fillRect(pad, 34, contentWidth, 5);
-      drawText(title, pad, 76, 30, colors.blue, 800);
-      drawText(`${subtitle} | Dicetak: ${new Date().toLocaleDateString("id-ID")}`, pad, 116, 16, colors.muted, 600);
-      drawText("RUANGGURU", canvas.width - pad, 76, 20, colors.teal, 800, "right");
+      drawText(title, pad, 82, 36, colors.blue, 800);
+      drawText(`${subtitle} | Dicetak: ${new Date().toLocaleDateString("id-ID")}`, pad, 130, 20, colors.muted, 600);
+      if (logoImage) {
+        const logoWidth = 155;
+        const logoHeight = logoWidth * (567 / 1021);
+        ctx.drawImage(logoImage, canvas.width - pad - logoWidth, 48, logoWidth, logoHeight);
+      } else {
+        drawText("RUANGGURU", canvas.width - pad, 82, 22, colors.teal, 800, "right");
+      }
       ctx.strokeStyle = colors.line;
       ctx.beginPath();
       ctx.moveTo(pad, 148);
@@ -5356,15 +5370,15 @@
       const boxGap = 10;
       const boxWidth = (contentWidth - (boxGap * 5)) / 6;
       const summaryY = 172;
-      drawCell(pad, summaryY, boxWidth, 86, colors.panel, "Target", totals.target, colors.muted);
-      drawCell(pad + (boxWidth + boxGap), summaryY, boxWidth, 86, "#ecfdf5", "Benar", totals.correct, colors.correct);
-      drawCell(pad + ((boxWidth + boxGap) * 2), summaryY, boxWidth, 86, "#fef2f2", "Salah", totals.wrong, colors.wrong);
-      drawCell(pad + ((boxWidth + boxGap) * 3), summaryY, boxWidth, 86, "#f5f3ff", "Blank", totals.blank, colors.blank);
-      drawCell(pad + ((boxWidth + boxGap) * 4), summaryY, boxWidth, 86, colors.panel, "Total", totals.total, colors.ink);
-      drawCell(pad + ((boxWidth + boxGap) * 5), summaryY, boxWidth, 86, "#fff7ed", "% Benar", totals.target ? Math.round((totals.correct / totals.target) * 100) : 0, colors.percent, "%");
+      drawCell(pad, summaryY, boxWidth, 96, colors.panel, "Target", totals.target, colors.muted);
+      drawCell(pad + (boxWidth + boxGap), summaryY, boxWidth, 96, "#ecfdf5", "Benar", totals.correct, colors.correct);
+      drawCell(pad + ((boxWidth + boxGap) * 2), summaryY, boxWidth, 96, "#fef2f2", "Salah", totals.wrong, colors.wrong);
+      drawCell(pad + ((boxWidth + boxGap) * 3), summaryY, boxWidth, 96, "#f5f3ff", "Blank", totals.blank, colors.blank);
+      drawCell(pad + ((boxWidth + boxGap) * 4), summaryY, boxWidth, 96, colors.panel, "Total", totals.total, colors.ink);
+      drawCell(pad + ((boxWidth + boxGap) * 5), summaryY, boxWidth, 96, "#fff7ed", "% Benar", totals.target ? Math.round((totals.correct / totals.target) * 100) : 0, colors.percent, "%");
 
-      const widths = [620, 310, 180, 180, 180, 150, 180, 150];
-      let tableY = 300;
+      const widths = [500, 260, 120, 120, 120, 100, 140, 140];
+      let tableY = 330;
       drawTableHeader(tableY, ["Nama", "Kelas", "Target", "Benar", "Salah", "Blank", "Total", "% Benar"], widths);
       tableY += tableHeaderHeight;
       displayRows.forEach((row) => {
@@ -5377,15 +5391,15 @@
           numberFmt.format(row.blank),
           numberFmt.format(row.total),
           `${row.target ? Math.round((row.correct / row.target) * 100) : 0}%`
-        ], widths, [colors.ink, colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent]);
+        ], widths, [colors.ink, colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent], row.total > 0 ? "#ecfdf5" : "#ffffff");
         tableY += rowHeight;
       });
 
       if (dateBreakdownRows.length) {
         tableY += 28;
-        drawText("Detail Per Tanggal", pad, tableY, 18, colors.blue, 800);
+        drawText("Detail Per Tanggal", pad, tableY, 21, colors.blue, 800);
         tableY += 20;
-        const dateWidths = [650, 220, 190, 190, 190, 180, 180];
+        const dateWidths = [540, 160, 160, 160, 160, 160, 160];
         drawTableHeader(tableY, ["Tanggal", "Target", "Benar", "Salah", "Blank", "Total", "% Benar"], dateWidths);
         tableY += tableHeaderHeight;
         dateBreakdownRows.forEach((row) => {
@@ -5397,7 +5411,7 @@
             numberFmt.format(row.blank),
             numberFmt.format(row.total),
             `${row.percent}%`
-          ], dateWidths, [colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent]);
+          ], dateWidths, [colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent], row.total > 0 ? "#ecfdf5" : "#ffffff");
           tableY += rowHeight;
         });
       }
@@ -5413,6 +5427,15 @@
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
       }, "image/png");
+    }
+
+    function loadExportImage(source) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error(`Gagal memuat ${source}`));
+        image.src = source;
+      });
     }
 
     function normalizeData(source) {
