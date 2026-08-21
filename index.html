@@ -54,7 +54,9 @@
     button.primary { color: #fff; background: var(--blue-dark); border-color: var(--blue-dark); }
     button.refresh { color: var(--green); border-color: rgba(16, 185, 129, 0.28); }
     button.danger { color: var(--red); border-color: rgba(239, 68, 68, 0.28); }
-    button.download-pdf { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #fff; background: #F58220; border-color: #F58220; min-width: 126px; box-shadow: 0 10px 22px rgba(245, 130, 32, 0.22); }
+    button.download-pdf, button.download-image { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #fff; border-color: transparent; min-width: 126px; box-shadow: 0 10px 22px rgba(245, 130, 32, 0.22); }
+    button.download-pdf { background: #F58220; border-color: #F58220; }
+    button.download-image { background: #007fc7; border-color: #007fc7; box-shadow: 0 10px 22px rgba(0, 127, 199, 0.22); }
     button.student-download { height: 18px; min-width: 82px; padding: 0 8px; border: 0; border-radius: 5px; color: #fff; background: var(--green); font-size: 10px; font-weight: 950; line-height: 1; letter-spacing: 0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.18); }
     button:disabled { opacity: 0.62; cursor: progress; }
     main { padding: 22px 0 34px; }
@@ -395,6 +397,11 @@
     .daily-branch-summary .missing { color: var(--red); font-weight: 900; }
     .daily-branch-summary .drilled { color: var(--green); font-weight: 900; }
     .daily-branch-summary .rate { color: var(--blue-dark); font-weight: 900; }
+    .daily-branch-summary .drill-rate-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 999px; font-weight: 950; }
+    .daily-branch-summary .drill-rate-badge.low { color: #fff; }
+    .daily-branch-summary .drill-rate-badge.medium { color: #334155; }
+    .daily-branch-summary .drill-rate-badge.high { color: #fff; }
+    .daily-branch-summary .rank-cell { color: #334155; font-weight: 950; }
     .detail-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; padding: 16px; }
     .detail-item { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fbfdff; }
     .detail-item.actionable { text-align: left; cursor: pointer; }
@@ -645,6 +652,7 @@
           <h2>Tanggal Drill Soal</h2>
           <div class="table-tools">
             <button id="downloadDrillPdfBtn" class="download-pdf" title="Unduh PDF Drill" aria-label="Unduh PDF Drill"><span>↓</span><span>PDF</span></button>
+            <button id="downloadDrillImageBtn" class="download-image" title="Unduh gambar Drill" aria-label="Unduh gambar Drill"><span>↓</span><span>PNG</span></button>
             <span class="pill" id="drillDateCount">0 tanggal</span>
           </div>
         </div>
@@ -850,6 +858,7 @@
       });
       $("drillSummaryGrid").addEventListener("click", handleDrillSummaryClick);
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
+      $("downloadDrillImageBtn").addEventListener("click", downloadDrillImage);
       $("refreshBtn").addEventListener("click", refreshData);
       $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
       $("studentRows").addEventListener("submit", handleAttendanceEditSubmit);
@@ -3872,20 +3881,43 @@
           const drilledCount = Math.max(0, students.length - missingCount);
           return { branch, total: students.length, drilled: drilledCount, missing: missingCount, percent: students.length ? Math.round((drilledCount / students.length) * 100) : 0 };
         })
-        .sort((a, b) => a.branch.localeCompare(b.branch, "id"));
+        .sort((a, b) => b.percent - a.percent || b.drilled - a.drilled || a.branch.localeCompare(b.branch, "id"))
+        .map((row, index) => ({ ...row, rank: index + 1 }));
       return `<div class="daily-all-branches">
         <div class="daily-grade-row">
           ${gradeItems.map((item) => `<button type="button" class="daily-grade-toggle ${item.grade === selectedGrade ? "active" : ""}" data-daily-all-grade="${escapeHtml(item.grade)}"><span>${escapeHtml(item.grade)}</span><span class="daily-grade-count">${numberFmt.format(item.missingItems.length)}</span></button>`).join("") || `<div class="empty">Tidak ada siswa target pada tanggal ini.</div>`}
         </div>
         ${selectedGrade ? `<div class="daily-branch-summary-wrap">
           <table class="daily-branch-summary">
-            <thead><tr><th>Nama Cabang</th><th>#Siswa</th><th>#Sudah Drill</th><th>#Belum Drill</th><th>#%Drill</th></tr></thead>
+            <thead><tr><th>Nama Cabang</th><th>#Siswa</th><th>#Sudah Drill</th><th>#Belum Drill</th><th>#%Drill</th><th>#Rank</th></tr></thead>
             <tbody>
-              ${rows.map((row) => `<tr><td>${escapeHtml(row.branch)}</td><td>${numberFmt.format(row.total)}</td><td class="drilled">${numberFmt.format(row.drilled)}</td><td class="missing">${numberFmt.format(row.missing)}</td><td class="rate">${row.percent}%</td></tr>`).join("") || `<tr><td colspan="5" class="empty">Tidak ada data kelas ${escapeHtml(selectedGrade)}.</td></tr>`}
+              ${rows.map((row) => `<tr><td>${escapeHtml(row.branch)}</td><td>${numberFmt.format(row.total)}</td><td class="drilled">${numberFmt.format(row.drilled)}</td><td class="missing">${numberFmt.format(row.missing)}</td><td class="rate"><span class="drill-rate-badge ${drillRateLevel(row.percent)}" style="${drillRateBadgeStyle(row.percent)}">${row.percent}%</span></td><td class="rank-cell">#${numberFmt.format(row.rank)}</td></tr>`).join("") || `<tr><td colspan="6" class="empty">Tidak ada data kelas ${escapeHtml(selectedGrade)}.</td></tr>`}
             </tbody>
           </table>
         </div>` : ""}
       </div>`;
+    }
+
+    function drillRateLevel(percent) {
+      const value = Math.max(0, Math.min(100, Number(percent) || 0));
+      if (value < 60) return "low";
+      if (value < 80) return "medium";
+      return "high";
+    }
+
+    function drillRateBadgeStyle(percent) {
+      const value = Math.max(0, Math.min(100, Number(percent) || 0));
+      const start = value <= 50 ? [254, 202, 202] : [255, 255, 255];
+      const end = value <= 50 ? [255, 255, 255] : [16, 185, 129];
+      const progress = value <= 50 ? value / 50 : (value - 50) / 50;
+      const channel = (index) => Math.round(start[index] + (end[index] - start[index]) * progress);
+      const background = `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
+      const luminance = (0.299 * channel(0)) + (0.587 * channel(1)) + (0.114 * channel(2));
+      const color = luminance < 180 ? "#991b1b" : "#334155";
+      const border = value <= 50
+        ? `rgb(${Math.max(0, channel(0) - 25)}, ${Math.max(0, channel(1) - 25)}, ${Math.max(0, channel(2) - 25)})`
+        : `rgb(${Math.max(0, channel(0) - 25)}, ${Math.max(0, channel(1) - 25)}, ${Math.max(0, channel(2) - 25)})`;
+      return `background:${background};color:${color};border-color:${border};`;
     }
 
     function dailyMissingClassFilterKey(branch, grade) {
@@ -5193,6 +5225,194 @@
         </html>
       `);
       printWindow.document.close();
+    }
+
+    function downloadDrillImage() {
+      const selectedStudent = drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "";
+      const selectedStudentRecord = findSelectedDrillStudent(selectedStudent);
+      const selectedClass = drillMode === "student" ? (selectedStudentRecord?.class || "") : $("drillClassSelect").value;
+      const selectedMonth = $("drillMonthSelect").value;
+      const selectedWeek = $("drillWeekSelect").value;
+      const date = selectedDrillDate;
+      const activeDates = currentDrillDates.length ? currentDrillDates : [date].filter(Boolean);
+      const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
+      if (!activeDates.length) {
+        alert("Tidak ada tanggal drill sesuai filter saat ini.");
+        return;
+      }
+      const rows = drillData.filter((row) => {
+        if (selectedStudent && !row.student.toLowerCase().includes(selectedStudent)) return false;
+        if (drillMode === "class" && selectedClass && row.class !== selectedClass) return false;
+        if (selectedPeriodDates && !selectedPeriodDates.has(row.date)) return false;
+        if (!activeDates.includes(row.date)) return false;
+        return true;
+      });
+      const displayRows = drillDisplayRows(rows, selectedClass, activeDates[0] || date, selectedStudent, activeDates);
+      if (!displayRows.length) {
+        alert("Tidak ada data siswa untuk filter drill saat ini.");
+        return;
+      }
+
+      const totals = {
+        target: displayRows.reduce((sum, row) => sum + row.target, 0),
+        correct: displayRows.reduce((sum, row) => sum + row.correct, 0),
+        wrong: displayRows.reduce((sum, row) => sum + row.wrong, 0),
+        blank: displayRows.reduce((sum, row) => sum + row.blank, 0),
+        total: displayRows.reduce((sum, row) => sum + row.total, 0)
+      };
+      const dateBreakdownRows = selectedStudent ? activeDates.map((activeDate) => {
+        const dateRows = rows.filter((row) => row.date === activeDate);
+        const [row] = drillDisplayRows(dateRows, selectedClass, activeDate, selectedStudent, [activeDate]);
+        const target = row?.target || 0;
+        const correct = row?.correct || 0;
+        const wrong = row?.wrong || 0;
+        const blank = row?.blank || 0;
+        const total = row?.total || 0;
+        return { date: activeDate, target, correct, wrong, blank, total, percent: target ? Math.round((correct / target) * 100) : 0 };
+      }) : [];
+      const title = selectedStudentRecord ? `Rekap Drill ${selectedStudentRecord.name}` : selectedClass ? `Rekap Drill ${selectedClass}` : "Rekap Drill Semua Siswa";
+      const subtitle = `${selectedMonth || "Semua month"}${selectedWeek ? ` - ${selectedWeek}` : " - Semua week"} | ${activeDates.length > 1 ? `${numberFmt.format(activeDates.length)} tanggal` : safeFormatLongDate(activeDates[0])}`;
+      const rowHeight = 34;
+      const headerHeight = 210;
+      const summaryHeight = 112;
+      const tableHeaderHeight = 42;
+      const sectionGap = dateBreakdownRows.length ? 70 : 28;
+      const detailTableHeight = dateBreakdownRows.length ? tableHeaderHeight + (dateBreakdownRows.length * rowHeight) + 18 : 0;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1800;
+      canvas.height = Math.max(720, headerHeight + summaryHeight + tableHeaderHeight + (displayRows.length * rowHeight) + sectionGap + detailTableHeight);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.textBaseline = "middle";
+
+      const colors = {
+        ink: "#13202f",
+        blue: "#007fc7",
+        teal: "#00809d",
+        muted: "#52657a",
+        line: "#cfe0ec",
+        header: "#e9f8ff",
+        panel: "#f6fbff",
+        correct: "#10B981",
+        wrong: "#ef4444",
+        blank: "#7c5ce7",
+        percent: "#F58220"
+      };
+      const pad = 54;
+      const contentWidth = canvas.width - (pad * 2);
+      const drawText = (text, x, y, size, color, weight = 700, align = "left") => {
+        ctx.font = `${weight} ${size}px Arial, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.fillText(String(text ?? ""), x, y);
+      };
+      const drawCell = (x, y, width, height, fill, label, value, valueColor = colors.ink, suffix = "") => {
+        ctx.fillStyle = fill;
+        ctx.strokeStyle = colors.line;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, 10);
+        ctx.fill();
+        ctx.stroke();
+        drawText(label, x + 14, y + 22, 15, colors.muted, 700);
+        drawText(`${numberFmt.format(value)}${suffix}`, x + 14, y + 66, 25, valueColor, 800);
+      };
+      const drawTableHeader = (y, headers, widths) => {
+        let x = pad;
+        headers.forEach((header, index) => {
+          const width = widths[index];
+          ctx.fillStyle = colors.header;
+          ctx.fillRect(x, y, width, tableHeaderHeight);
+          ctx.strokeStyle = colors.line;
+          ctx.strokeRect(x, y, width, tableHeaderHeight);
+          drawText(header, index < 2 ? x + 12 : x + width / 2, y + tableHeaderHeight / 2, 14, colors.muted, 800, index < 2 ? "left" : "center");
+          x += width;
+        });
+      };
+      const drawTableRow = (y, values, widths, valueColors = []) => {
+        let x = pad;
+        values.forEach((value, index) => {
+          const width = widths[index];
+          ctx.fillStyle = "#ffffff";
+          ctx.strokeStyle = colors.line;
+          ctx.strokeRect(x, y, width, rowHeight);
+          drawText(value, index < 2 ? x + 12 : x + width / 2, y + rowHeight / 2, 14, valueColors[index] || colors.ink, index < 2 ? 600 : 700, index < 2 ? "left" : "center");
+          x += width;
+        });
+      };
+
+      ctx.fillStyle = colors.teal;
+      ctx.fillRect(pad, 34, contentWidth, 5);
+      drawText(title, pad, 76, 30, colors.blue, 800);
+      drawText(`${subtitle} | Dicetak: ${new Date().toLocaleDateString("id-ID")}`, pad, 116, 16, colors.muted, 600);
+      drawText("RUANGGURU", canvas.width - pad, 76, 20, colors.teal, 800, "right");
+      ctx.strokeStyle = colors.line;
+      ctx.beginPath();
+      ctx.moveTo(pad, 148);
+      ctx.lineTo(canvas.width - pad, 148);
+      ctx.stroke();
+
+      const boxGap = 10;
+      const boxWidth = (contentWidth - (boxGap * 5)) / 6;
+      const summaryY = 172;
+      drawCell(pad, summaryY, boxWidth, 86, colors.panel, "Target", totals.target, colors.muted);
+      drawCell(pad + (boxWidth + boxGap), summaryY, boxWidth, 86, "#ecfdf5", "Benar", totals.correct, colors.correct);
+      drawCell(pad + ((boxWidth + boxGap) * 2), summaryY, boxWidth, 86, "#fef2f2", "Salah", totals.wrong, colors.wrong);
+      drawCell(pad + ((boxWidth + boxGap) * 3), summaryY, boxWidth, 86, "#f5f3ff", "Blank", totals.blank, colors.blank);
+      drawCell(pad + ((boxWidth + boxGap) * 4), summaryY, boxWidth, 86, colors.panel, "Total", totals.total, colors.ink);
+      drawCell(pad + ((boxWidth + boxGap) * 5), summaryY, boxWidth, 86, "#fff7ed", "% Benar", totals.target ? Math.round((totals.correct / totals.target) * 100) : 0, colors.percent, "%");
+
+      const widths = [620, 310, 180, 180, 180, 150, 180, 150];
+      let tableY = 300;
+      drawTableHeader(tableY, ["Nama", "Kelas", "Target", "Benar", "Salah", "Blank", "Total", "% Benar"], widths);
+      tableY += tableHeaderHeight;
+      displayRows.forEach((row) => {
+        drawTableRow(tableY, [
+          row.student,
+          row.class,
+          numberFmt.format(row.target),
+          numberFmt.format(row.correct),
+          numberFmt.format(row.wrong),
+          numberFmt.format(row.blank),
+          numberFmt.format(row.total),
+          `${row.target ? Math.round((row.correct / row.target) * 100) : 0}%`
+        ], widths, [colors.ink, colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent]);
+        tableY += rowHeight;
+      });
+
+      if (dateBreakdownRows.length) {
+        tableY += 28;
+        drawText("Detail Per Tanggal", pad, tableY, 18, colors.blue, 800);
+        tableY += 20;
+        const dateWidths = [650, 220, 190, 190, 190, 180, 180];
+        drawTableHeader(tableY, ["Tanggal", "Target", "Benar", "Salah", "Blank", "Total", "% Benar"], dateWidths);
+        tableY += tableHeaderHeight;
+        dateBreakdownRows.forEach((row) => {
+          drawTableRow(tableY, [
+            safeFormatLongDate(row.date),
+            numberFmt.format(row.target),
+            numberFmt.format(row.correct),
+            numberFmt.format(row.wrong),
+            numberFmt.format(row.blank),
+            numberFmt.format(row.total),
+            `${row.percent}%`
+          ], dateWidths, [colors.ink, colors.muted, colors.correct, colors.wrong, colors.blank, colors.ink, colors.percent]);
+          tableY += rowHeight;
+        });
+      }
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert("Gambar gagal dibuat.");
+          return;
+        }
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "rekap-drill"}.png`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }, "image/png");
     }
 
     function normalizeData(source) {
