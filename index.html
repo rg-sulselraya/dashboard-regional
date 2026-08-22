@@ -3717,7 +3717,7 @@
       });
       renderStudentGradeTabs([...new Set([...grouped.values()].map((item) => item.grade))]);
       const leaders = [...grouped.values()]
-        .filter((item) => item.grade === selectedDrillGrade)
+        .filter((item) => selectedDrillGrade === "ALL GRADE" || item.grade === selectedDrillGrade)
         .sort((a, b) => b.percentExact - a.percentExact || b.correct - a.correct || a.student.localeCompare(b.student, "id"))
         .slice(0, 3);
       renderRankLeaderboard(leaders);
@@ -3747,10 +3747,10 @@
     }
 
     function renderStudentGradeTabs(availableGrades = []) {
-      const grades = ["6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
+      const grades = ["ALL GRADE", "6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
       const available = new Set(availableGrades);
-      if (!grades.includes(selectedDrillGrade) || (available.size && !available.has(selectedDrillGrade))) {
-        selectedDrillGrade = grades.find((grade) => available.has(grade)) || "12 SMA";
+      if (selectedDrillGrade !== "ALL GRADE" && (!grades.includes(selectedDrillGrade) || (available.size && !available.has(selectedDrillGrade)))) {
+        selectedDrillGrade = grades.find((grade) => grade !== "ALL GRADE" && available.has(grade)) || "ALL GRADE";
       }
       $("drillGradeTabs").hidden = false;
       $("drillGradeTabs").innerHTML = grades.map((grade) => `<button class="grade-tab ${grade === selectedDrillGrade ? "active" : ""}" data-drill-grade="${escapeHtml(grade)}">${escapeHtml(grade)}</button>`).join("");
