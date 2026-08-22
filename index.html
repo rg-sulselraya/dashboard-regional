@@ -840,7 +840,7 @@
       return localIsoDate(date);
     }
 
-    function init() {
+    async function init() {
       initAccessGate();
       const restoredAttendance = restoreLiveData();
       restoreLiveDrillData();
@@ -897,11 +897,12 @@
         scheduleDrillRender();
       });
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
+      if (location.protocol === "file:") {
+        updateDataSourceStatus("Memuat data terbaru");
+        await refreshLocalBundledData({ silent: true, keepFilters: true });
+      }
       render();
       startAutoRefresh();
-      if (location.protocol === "file:") {
-        window.setTimeout(() => refreshLocalBundledData({ silent: true, keepFilters: true }), 0);
-      }
     }
 
     function setAttendanceMode(mode) {
@@ -4655,8 +4656,11 @@
         scheduleDrillRender();
         $("dataSubtitle").textContent += ` | diperbarui ${refreshTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
         updateLiveScriptStatus(refreshTime, "Data GitHub");
+        return true;
       } catch (error) {
         console.warn("Sinkronisasi data lokal gagal:", error);
+        updateDataSourceStatus("Data lokal tersimpan");
+        return false;
       }
     }
 
