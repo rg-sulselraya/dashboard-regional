@@ -3861,13 +3861,16 @@
 
     function renderDailyMissingAllBranches(activeStudents, missingStudents) {
       const selectedGrade = selectedDailyMissingGradeByBranch.get("__all__") || "";
+      const allGradeKey = "__all_grades__";
       const gradeOrder = ["6 SD", "7 SMP", "8 SMP", "9 SMP", "10 SMA", "11 SMA", "12 SMA"];
       const gradeItems = gradeOrder.map((grade) => ({
         grade,
         items: activeStudents.filter((student) => gradeFromClass(student.class) === grade),
         missingItems: missingStudents.filter((student) => gradeFromClass(student.class) === grade)
       })).filter((item) => item.items.length);
-      const selectedStudents = activeStudents.filter((student) => gradeFromClass(student.class) === selectedGrade);
+      const selectedStudents = selectedGrade === allGradeKey
+        ? activeStudents
+        : activeStudents.filter((student) => gradeFromClass(student.class) === selectedGrade);
       const activeByBranch = new Map();
       selectedStudents.forEach((student) => {
         const branch = student.branch || "-";
@@ -3885,6 +3888,7 @@
         .map((row, index) => ({ ...row, rank: index + 1 }));
       return `<div class="daily-all-branches">
         <div class="daily-grade-row">
+          ${activeStudents.length ? `<button type="button" class="daily-grade-toggle ${selectedGrade === allGradeKey ? "active" : ""}" data-daily-all-grade="${allGradeKey}"><span>ALL GRADE</span><span class="daily-grade-count">${numberFmt.format(missingStudents.length)}</span></button>` : ""}
           ${gradeItems.map((item) => `<button type="button" class="daily-grade-toggle ${item.grade === selectedGrade ? "active" : ""}" data-daily-all-grade="${escapeHtml(item.grade)}"><span>${escapeHtml(item.grade)}</span><span class="daily-grade-count">${numberFmt.format(item.missingItems.length)}</span></button>`).join("") || `<div class="empty">Tidak ada siswa target pada tanggal ini.</div>`}
         </div>
         ${selectedGrade ? `<div class="daily-branch-summary-wrap">
