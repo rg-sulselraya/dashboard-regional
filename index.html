@@ -705,6 +705,7 @@
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
     const LIVE_DRILL_SCHEMA_VERSION = 9;
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
+    const REMOTE_BUNDLED_DATA_BASE_URL = "https://raw.githubusercontent.com/rg-sulselraya/dashboard-regional/main";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
     const DRILL_MENU_DATE = offsetIsoDate(DASHBOARD_MIN_TODAY, -1);
@@ -897,6 +898,10 @@
       });
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
       render();
+      startAutoRefresh();
+      if (location.protocol === "file:") {
+        window.setTimeout(() => refreshLocalBundledData({ silent: true, keepFilters: true }), 0);
+      }
     }
 
     function setAttendanceMode(mode) {
@@ -4581,6 +4586,9 @@
     }
 
     async function refreshData(options = {}) {
+      if (location.protocol === "file:") {
+        return refreshLocalBundledData(options);
+      }
       const { silent = false, keepFilters = false } = options;
       const button = $("refreshBtn");
       const previous = button.textContent;
@@ -4618,6 +4626,50 @@
         button.disabled = false;
         button.textContent = previous;
       }
+    }
+
+    async function refreshLocalBundledData(options = {}) {
+      const { keepFilters = true } = options;
+      try {
+        const cachebust = `?cachebust=${Date.now()}`;
+        const [attendanceResponse, drillResponse] = await Promise.all([
+          fetch(`${REMOTE_BUNDLED_DATA_BASE_URL}/attendance-data.js${cachebust}`, { cache: "no-store" }),
+          fetch(`${REMOTE_BUNDLED_DATA_BASE_URL}/drill-data.js${cachebust}`, { cache: "no-store" })
+        ]);
+        if (!attendanceResponse.ok || !drillResponse.ok) throw new Error("Data remote tidak dapat dimuat");
+        const refreshedData = normalizeData(parseBundledDataScript(await attendanceResponse.text(), "ATTENDANCE_DATA"));
+        const refreshedDrillData = parseBundledDataScript(await drillResponse.text(), "DRILL_DATA");
+        validateRefreshedAttendanceData(refreshedData);
+        validateStoredDrillData(refreshedDrillData);
+        const refreshTime = new Date();
+        data = refreshedData;
+        drillData = refreshedDrillData;
+        drillLoaded = true;
+        drillLoadedScope = drillScope();
+        saveLiveData(refreshedData, refreshTime);
+        saveLiveDrillData(refreshedDrillData, refreshTime);
+        rebuildIndexes();
+        fillOptions();
+        fillDrillFilters();
+        if (keepFilters) render();
+        scheduleDrillRender();
+        $("dataSubtitle").textContent += ` | diperbarui ${refreshTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
+        updateLiveScriptStatus(refreshTime, "Data GitHub");
+      } catch (error) {
+        console.warn("Sinkronisasi data lokal gagal:", error);
+      }
+    }
+
+    function parseBundledDataScript(source, dataName) {
+      const marker = `window.${dataName} =`;
+      const markerIndex = String(source || "").indexOf(marker);
+      if (markerIndex < 0) throw new Error(`Data ${dataName} tidak ditemukan`);
+      const text = String(source).slice(markerIndex + marker.length).trim().replace(/;\s*$/, "");
+      const open = text[0];
+      const close = open === "[" ? "]" : "}";
+      const end = text.lastIndexOf(close);
+      if (!text || !["[", "{"].includes(open) || end < 0) throw new Error(`Format data ${dataName} tidak valid`);
+      return JSON.parse(text.slice(0, end + 1));
     }
 
     function validateRefreshedAttendanceData(refreshedData) {
