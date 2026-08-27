@@ -353,6 +353,7 @@ function buildDrillData(rows, studentLookup = new Map()) {
   if (data.length < 100) {
     throw new Error(`Drill data looks incomplete: ${data.length} rows`);
   }
-  fs.writeFileSync(OUT, `window.DRILL_DATA = ${JSON.stringify(data)};\n`);
+  const generatedFrom = `Google Sheets ${new Date().toISOString()}`;
+  fs.writeFileSync(OUT, `window.DRILL_DATA = ${JSON.stringify(data)};\nwindow.DRILL_DATA_META = ${JSON.stringify({ generatedFrom, rowCount: data.length })};\n`);
   console.log(`Updated drill-data.js: ${data.length} drill rows`);
 })();

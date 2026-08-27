@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitoring Kesiswaan Sulsel Raya</title>
   <script src="chart.umd.min.js?v=20260815w"></script>
-  <script src="attendance-data.js?v=20260816x"></script>
-  <script src="drill-data.js?v=20260815w"></script>
+  <script>
+    const dataAssetCacheBust = `?cachebust=${Date.now()}`;
+    document.write(`<script src="attendance-data.js${dataAssetCacheBust}"><\/script>`);
+    document.write(`<script src="drill-data.js${dataAssetCacheBust}"><\/script>`);
+  </script>
   <style>
     :root {
       --bg: #eef8fd;
@@ -705,9 +708,9 @@
     const SHEET_PROXY_URL = "/.netlify/functions/sheet";
     const APPS_SCRIPT_URL = localStorage.getItem("sulselRayaAppsScriptUrl") || "";
     const LIVE_DATA_STORAGE_KEY = "sulselRayaLiveAttendanceData";
-    const LIVE_DATA_SCHEMA_VERSION = 12;
+    const LIVE_DATA_SCHEMA_VERSION = 13;
     const LIVE_DRILL_STORAGE_KEY = "sulselRayaLiveDrillData";
-    const LIVE_DRILL_SCHEMA_VERSION = 9;
+    const LIVE_DRILL_SCHEMA_VERSION = 10;
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const REMOTE_BUNDLED_DATA_BASE_URL = "https://raw.githubusercontent.com/rg-sulselraya/dashboard-regional/main";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
@@ -901,10 +904,8 @@
         scheduleDrillRender();
       });
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
-      if (location.protocol === "file:") {
-        updateDataSourceStatus("Memuat data terbaru");
-        await refreshLocalBundledData({ silent: true, keepFilters: true });
-      }
+      updateDataSourceStatus("Memuat data live");
+      await refreshData({ silent: true, keepFilters: true });
       render();
       startAutoRefresh();
     }
@@ -3772,6 +3773,152 @@
       </div>`;
     }
 
+    async function downloadLeaderboardInstagramImage() {
+      const panel = $("drillLeaderboardPanel");
+      if (!panel || panel.hidden) {
+        alert("Top Performer belum tersedia untuk filter saat ini.");
+        return;
+      }
+      const selectedGrade = selectedDrillGrade || "ALL GRADE";
+      const selectedMonth = $("drillMonthSelect").value;
+      const selectedWeek = $("drillWeekSelect").value;
+      const selectedDate = selectedDrillDate || currentDrillDates.at(-1) || DRILL_MENU_DATE;
+      const subtitle = `${selectedGrade} · ${selectedMonth || "Semua bulan"}${selectedWeek ? ` · ${selectedWeek}` : ""} · ${safeFormatLongDate(selectedDate)}`;
+      const cards = [...$("drillLeaderboardGrid").querySelectorAll(".leaderboard-item")].slice(0, 3);
+      if (!cards.length) {
+        alert("Belum ada Top Performer untuk diunduh.");
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = 1122;
+      canvas.height = 1402;
+      const ctx = canvas.getContext("2d");
+      const colors = { ink: "#13202f", muted: "#52657a", navy: "#073a67", blue: "#007fc7", teal: "#00809d", orange: "#f58220", line: "#cfe0ec" };
+      const drawText = (text, x, y, size, color, weight = 700, align = "left") => {
+        ctx.font = `${weight} ${size}px Arial, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(text || ""), x, y);
+      };
+      const roundRect = (x, y, width, height, radius, fill, stroke = null, lineWidth = 1) => {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+          ctx.lineWidth = lineWidth;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+        }
+      };
+      const drawWrapped = (text, x, y, maxChars, size, color, lineHeight, maxLines = 2) => {
+        wrapCanvasText(text, 0, size, maxChars).slice(0, maxLines).forEach((line, index) => drawText(line, x, y + (index * lineHeight), size, color, 900));
+      };
+      const pill = (text, x, y, width, height, fill, color, stroke = null) => {
+        roundRect(x, y, width, height, height / 2, fill, stroke, stroke ? 2 : 1);
+        drawText(text, x + (width / 2), y + (height / 2), 17, color, 800, "center");
+      };
+      const leader = (card, index) => ({
+        rank: `#${index + 1}`,
+        name: card.querySelector(".leaderboard-name")?.textContent?.trim() || "-",
+        meta: [...card.querySelectorAll(".leaderboard-meta-line")].map((item) => item.textContent.trim()).filter(Boolean),
+        percent: card.querySelector(".leaderboard-score")?.textContent?.trim() || "0%"
+      });
+      const leaders = cards.map(leader);
+      const background = ctx.createLinearGradient(0, 0, 1122, 1402);
+      background.addColorStop(0, "#0065a8");
+      background.addColorStop(0.35, "#00809d");
+      background.addColorStop(1, "#eaf8fb");
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const cover = (x, y, width, height, fill) => {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, width, height);
+      };
+      const drawSparkle = (x, y, size, color) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size * 0.22, y - size * 0.22);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x + size * 0.22, y + size * 0.22);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size * 0.22, y + size * 0.22);
+        ctx.lineTo(x - size, y);
+        ctx.lineTo(x - size * 0.22, y - size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+      };
+      ctx.fillStyle = "rgba(255,255,255,0.1)";
+      for (let index = -2; index < 14; index += 1) {
+        ctx.save();
+        ctx.translate(index * 110, 0);
+        ctx.rotate(-0.28);
+        ctx.fillRect(0, -40, 28, 470);
+        ctx.restore();
+      }
+      [
+        [930, 80, 8, "#f7d46a"], [990, 150, 5, "#d8f8ff"], [800, 240, 6, "#f7d46a"],
+        [710, 82, 4, "#ffffff"], [940, 245, 4, "#ffffff"], [520, 230, 6, "#d8f8ff"]
+      ].forEach(([x, y, size, color]) => drawSparkle(x, y, size, color));
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(70, 58, 22, 0, Math.PI * 2);
+      ctx.fill();
+      drawText("🏆", 70, 60, 27, "#f4b51b", 800, "center");
+      drawText("TOP PERFORMER", 110, 52, 18, "#d8f8ff", 800);
+      drawText("DRILL SOAL", 110, 92, 42, "#ffffff", 900);
+      drawText(selectedGrade, 110, 140, 22, "#d8f8ff", 700);
+      drawText(subtitle, 110, 178, 18, "#ffffff", 600);
+      pill("RANKING TERATAS", 110, 210, 190, 38, "rgba(255,255,255,0.16)", "#ffffff", "rgba(255,255,255,0.42)");
+      const specs = [
+        { y: 563, h: 250, fill: "#fff7c7", stroke: "#f4b51b", name: [330, 637, 31, 25], metaY: 718, percent: [930, 718, 48, "#f58220"] },
+        { y: 845, h: 190, fill: "#eef5fb", stroke: "#8b9bad", name: [330, 905, 27, 30], metaY: 970, percent: [930, 970, 40, "#64748b"] },
+        { y: 1080, h: 180, fill: "#fff0e3", stroke: "#d88945", name: [330, 1135, 27, 30], metaY: 1195, percent: [930, 1195, 40, "#b45309"] }
+      ];
+      leaders.forEach((item, index) => {
+        const spec = specs[index];
+        if (!spec) return;
+        roundRect(42, spec.y, 1036, spec.h, 24, spec.fill, spec.stroke, 3);
+        pill(`#${index + 1}`, 966, spec.y + 16, 78, 42, spec.stroke, "#fff");
+        drawWrapped(item.name, spec.name[0], spec.name[1], spec.name[2], spec.name[3], colors.navy, index === 0 ? 38 : 32, 2);
+        item.meta.slice(0, 2).forEach((line, lineIndex) => drawText(line, 330, spec.metaY + (lineIndex * 28), 18, colors.navy, 700));
+        roundRect(790, spec.y + 112, 244, 102, 18, "#fff", spec.stroke, 3);
+        drawText(item.percent, spec.percent[0], spec.percent[1] + 4, spec.percent[2], spec.percent[3], 900, "center");
+        drawText("CAPAIAN TARGET", 912, spec.y + 192, 14, colors.navy, 800, "center");
+      });
+      ctx.fillStyle = "rgba(0, 46, 100, 0.86)";
+      ctx.fillRect(0, 1314, canvas.width, 88);
+      drawText("Monitoring Kesiswaan Sulsel Raya", 70, 1358, 18, "#fff", 700);
+      drawText("Instagram 4:5", 1052, 1358, 18, "#fff", 800, "right");
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `top-performer-${selectedGrade.toLowerCase().replace(/\s+/g, "-")}-instagram.png`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }, "image/png");
+    }
+
+    function wrapCanvasText(text, maxWidth, fontSize, maxChars) {
+      const words = String(text || "").split(/\s+/);
+      const lines = [];
+      let line = "";
+      words.forEach((word) => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (candidate.length > maxChars && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
     function renderDailyMissingDrill() {
       const dateInput = $("dailyMissingDrillDate");
       if (!dateInput) return;
@@ -4591,9 +4738,6 @@
     }
 
     async function refreshData(options = {}) {
-      if (location.protocol === "file:") {
-        return refreshLocalBundledData(options);
-      }
       const { silent = false, keepFilters = false } = options;
       const button = $("refreshBtn");
       const previous = button.textContent;
@@ -4602,31 +4746,45 @@
       try {
         appsScriptDataPromise = null;
         const refreshTime = new Date();
+        const selectedBranch = $("branchSelect").value;
         const branchLookup = buildBranchLookup(await loadSheetRowsByName("Data Siswa"));
         const refreshedData = normalizeData(buildAttendanceData(await loadSheetRows("0"), branchLookup));
-        const selectedBranch = $("branchSelect").value;
-        const refreshedDrillRows = selectedBranch
-          ? await loadDrillRowsForBranch(selectedBranch)
-          : (await Promise.all(branches.map((branch) => loadDrillRowsForBranch(branch)))).flat();
-        const refreshedDrillData = buildDrillData(refreshedDrillRows);
+        refreshedData.generatedFrom = `Google Sheets ${refreshTime.toISOString()}`;
         validateRefreshedAttendanceData(refreshedData);
-        validateStoredDrillData(refreshedDrillData);
         data = refreshedData;
-        drillData = refreshedDrillData;
-        drillLoaded = true;
         saveLiveData(refreshedData, refreshTime);
-        saveLiveDrillData(refreshedDrillData, refreshTime);
         rebuildIndexes();
         fillOptions();
+        if (selectedBranch && branches.includes(selectedBranch)) $("branchSelect").value = selectedBranch;
+
+        let drillStatus = "Data live";
+        try {
+          const refreshedDrillRows = selectedBranch
+            ? await loadDrillRowsForBranch(selectedBranch)
+            : (await Promise.all(branches.map((branch) => loadDrillRowsForBranch(branch)))).flat();
+          const refreshedDrillData = buildDrillData(refreshedDrillRows);
+          validateStoredDrillData(refreshedDrillData);
+          drillData = refreshedDrillData;
+          drillLoaded = true;
+          drillLoadedScope = drillScope();
+          saveLiveDrillData(refreshedDrillData, refreshTime, refreshedData.generatedFrom);
+        } catch (error) {
+          drillStatus = "Data live (drill tersimpan)";
+          console.warn("Refresh drill gagal, data drill sebelumnya tetap dipakai:", error);
+        }
         fillDrillFilters();
         if (keepFilters) render();
         else resetFilters();
         scheduleDrillRender();
         $("dataSubtitle").textContent += ` | diperbarui ${refreshTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
-        updateLiveScriptStatus(refreshTime, "Data live");
+        updateLiveScriptStatus(refreshTime, drillStatus);
+        return true;
       } catch (error) {
         console.warn("Refresh gagal:", error);
+        const fallbackUpdated = await refreshLocalBundledData({ silent: true, keepFilters });
+        if (fallbackUpdated) return true;
         if (!silent) alert(`Refresh gagal: ${error.message || "data dari spreadsheet tidak lengkap"}. Data dashboard sebelumnya tetap dipakai.`);
+        return false;
       } finally {
         button.disabled = false;
         button.textContent = previous;
@@ -4646,6 +4804,10 @@
         const refreshedDrillData = parseBundledDataScript(await drillResponse.text(), "DRILL_DATA");
         validateRefreshedAttendanceData(refreshedData);
         validateStoredDrillData(refreshedDrillData);
+        if (!isDataCandidateAtLeastAsRecent(refreshedData, data)) {
+          updateDataSourceStatus("Data tersimpan lebih baru");
+          return false;
+        }
         const refreshTime = new Date();
         data = refreshedData;
         drillData = refreshedDrillData;
@@ -4657,6 +4819,7 @@
         fillOptions();
         fillDrillFilters();
         if (keepFilters) render();
+        else resetFilters();
         scheduleDrillRender();
         $("dataSubtitle").textContent += ` | diperbarui ${refreshTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
         updateLiveScriptStatus(refreshTime, "Data GitHub");
@@ -4709,10 +4872,49 @@
       $("liveScriptStatus").innerHTML = `<span class="live-dot"></span><span>${label}${suffix}</span>`;
     }
 
+    function dataTimestamp(value) {
+      const text = String(value || "").replace(/^Google Sheets\s*/i, "").trim();
+      const timestamp = Date.parse(text);
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    }
+
+    function sourceDataTimestamp(source) {
+      return dataTimestamp(source?.generatedFrom);
+    }
+
+    function bundledDataTimestamp() {
+      return Math.max(
+        sourceDataTimestamp(window.ATTENDANCE_DATA),
+        dataTimestamp(window.DRILL_DATA_META?.generatedFrom)
+      );
+    }
+
+    function storedDataTimestamp(saved) {
+      return dataTimestamp(saved?.generatedFrom) || dataTimestamp(saved?.updatedAt);
+    }
+
+    function isStoredDataCurrent(saved) {
+      const storedTimestamp = storedDataTimestamp(saved);
+      const newestKnownTimestamp = Math.max(bundledDataTimestamp(), sourceDataTimestamp(data));
+      return storedTimestamp > 0 && (!newestKnownTimestamp || storedTimestamp >= newestKnownTimestamp);
+    }
+
+    function isDataCandidateAtLeastAsRecent(candidate, current) {
+      const candidateTimestamp = sourceDataTimestamp(candidate);
+      const currentTimestamp = sourceDataTimestamp(current);
+      if (currentTimestamp && !candidateTimestamp) return false;
+      return !currentTimestamp || candidateTimestamp >= currentTimestamp;
+    }
+
     function saveLiveData(refreshedData, date) {
       try {
         validateStoredLiveData(refreshedData);
-        localStorage.setItem(LIVE_DATA_STORAGE_KEY, JSON.stringify({ version: LIVE_DATA_SCHEMA_VERSION, updatedAt: date.toISOString(), data: refreshedData }));
+        localStorage.setItem(LIVE_DATA_STORAGE_KEY, JSON.stringify({
+          version: LIVE_DATA_SCHEMA_VERSION,
+          updatedAt: date.toISOString(),
+          generatedFrom: refreshedData.generatedFrom || `Google Sheets ${date.toISOString()}`,
+          data: refreshedData
+        }));
       } catch (error) {}
     }
 
@@ -4726,7 +4928,10 @@
       try {
         const saved = JSON.parse(localStorage.getItem(LIVE_DATA_STORAGE_KEY) || "null");
         if (!saved?.data) return false;
-        if (saved.version !== LIVE_DATA_SCHEMA_VERSION) return false;
+        if (saved.version !== LIVE_DATA_SCHEMA_VERSION || !isStoredDataCurrent(saved)) {
+          localStorage.removeItem(LIVE_DATA_STORAGE_KEY);
+          return false;
+        }
         const restoredData = normalizeData(saved.data);
         validateStoredLiveData(restoredData);
         data = restoredData;
@@ -4738,9 +4943,14 @@
       }
     }
 
-    function saveLiveDrillData(refreshedDrillData, date) {
+    function saveLiveDrillData(refreshedDrillData, date, generatedFrom = "") {
       try {
-        localStorage.setItem(LIVE_DRILL_STORAGE_KEY, JSON.stringify({ version: LIVE_DRILL_SCHEMA_VERSION, updatedAt: date.toISOString(), data: refreshedDrillData }));
+        localStorage.setItem(LIVE_DRILL_STORAGE_KEY, JSON.stringify({
+          version: LIVE_DRILL_SCHEMA_VERSION,
+          updatedAt: date.toISOString(),
+          generatedFrom: generatedFrom || data.generatedFrom || `Google Sheets ${date.toISOString()}`,
+          data: refreshedDrillData
+        }));
       } catch (error) {}
     }
 
@@ -4748,7 +4958,10 @@
       try {
         const saved = JSON.parse(localStorage.getItem(LIVE_DRILL_STORAGE_KEY) || "null");
         if (!Array.isArray(saved?.data) || !saved.data.length) return;
-        if (saved.version !== LIVE_DRILL_SCHEMA_VERSION) return;
+        if (saved.version !== LIVE_DRILL_SCHEMA_VERSION || !isStoredDataCurrent(saved)) {
+          localStorage.removeItem(LIVE_DRILL_STORAGE_KEY);
+          return;
+        }
         validateStoredDrillData(saved.data);
         if (drillFallbackData.length && saved.data.length < Math.floor(drillFallbackData.length * 0.8)) {
           localStorage.removeItem(LIVE_DRILL_STORAGE_KEY);
@@ -4787,11 +5000,20 @@
       }
     }
 
+    function validateSheetRows(rows) {
+      if (!Array.isArray(rows) || rows.length < 2 || !rows.some((row) => Array.isArray(row) && row.length > 1)) {
+        throw new Error("Google Sheets mengembalikan data kosong");
+      }
+      return rows;
+    }
+
     async function loadSheetRows(gid) {
+      let lastError = null;
       if (APPS_SCRIPT_URL) {
         try {
-          return await loadSheetRowsFromAppsScript(gid);
+          return validateSheetRows(await loadSheetRowsFromAppsScript(gid));
         } catch (error) {
+          lastError = error;
           console.warn("Apps Script refresh failed, falling back:", error);
         }
       }
@@ -4799,26 +5021,34 @@
         try {
           const response = await fetch(`${SHEET_PROXY_URL}?gid=${encodeURIComponent(gid)}&cachebust=${Date.now()}`, { cache: "no-store" });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return parseCsv(await response.text());
+          return validateSheetRows(parseCsv(await response.text()));
         } catch (error) {
+          lastError = error;
           console.warn("Netlify proxy refresh failed, falling back:", error);
         }
       }
       try {
-        return await loadSheetRowsDirectCsv({ gid });
+        return validateSheetRows(await loadSheetRowsDirectCsv({ gid }));
       } catch (error) {
+        lastError = error;
         console.warn("Direct CSV refresh failed:", error);
-        if (gid === "0") throw new Error("Refresh live CSV gagal. Data lokal tetap dipakai.");
       }
-      if (gid === "0") throw new Error("Refresh live attendance harus memakai Apps Script/CSV. Data lokal tetap dipakai.");
-      return loadSheetRowsFallback(gid);
+      try {
+        return validateSheetRows(await loadSheetRowsFallback(gid));
+      } catch (error) {
+        lastError = error;
+        console.warn("Google Sheets JSONP refresh failed:", error);
+      }
+      throw new Error(`Data live sheet ${gid} gagal dimuat: ${lastError?.message || "sumber tidak tersedia"}`);
     }
 
     async function loadSheetRowsByName(sheetName) {
+      let lastError = null;
       if (APPS_SCRIPT_URL) {
         try {
-          return await loadSheetRowsFromAppsScript("", sheetName);
+          return validateSheetRows(await loadSheetRowsFromAppsScript("", sheetName));
         } catch (error) {
+          lastError = error;
           console.warn("Apps Script sheet refresh failed, falling back:", error);
         }
       }
@@ -4826,17 +5056,25 @@
         try {
           const response = await fetch(`${SHEET_PROXY_URL}?sheet=${encodeURIComponent(sheetName)}&range=${encodeURIComponent("A:V")}&cachebust=${Date.now()}`, { cache: "no-store" });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return parseCsv(await response.text());
+          return validateSheetRows(parseCsv(await response.text()));
         } catch (error) {
+          lastError = error;
           console.warn("Netlify sheet refresh failed, falling back:", error);
         }
       }
       try {
-        return await loadSheetRowsDirectCsv({ sheetName, range: "A:V" });
+        return validateSheetRows(await loadSheetRowsDirectCsv({ sheetName, range: "A:V" }));
       } catch (error) {
+        lastError = error;
         console.warn("Direct CSV sheet refresh failed:", error);
       }
-      return loadSheetRowsFallback("0", sheetName);
+      try {
+        return validateSheetRows(await loadSheetRowsFallback("0", sheetName));
+      } catch (error) {
+        lastError = error;
+        console.warn("Google Sheets JSONP sheet refresh failed:", error);
+      }
+      throw new Error(`Data live sheet "${sheetName}" gagal dimuat: ${lastError?.message || "sumber tidak tersedia"}`);
     }
 
 
@@ -4868,7 +5106,7 @@
 
     function loadSheetRowsFallback(gid, sheetName = "") {
       return new Promise((resolve, reject) => {
-        const callbackName = `sheetFallback_${gid}_${Date.now()}`.replace(/\D/g, "_");
+        const callbackName = `sheetFallback_${gid}_${sheetName || "gid"}_${Date.now()}_${Math.random().toString(36).slice(2)}`.replace(/[^a-zA-Z0-9_$]/g, "_");
         const script = document.createElement("script");
         const timeout = window.setTimeout(() => {
           cleanup();
