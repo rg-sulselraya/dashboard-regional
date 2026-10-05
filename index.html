@@ -3729,7 +3729,7 @@
     }
 
     function leaderboardVisibleTargetDates(month, week) {
-      if (week) return drillWeekRange(month, week);
+      if (week) return drillVisibleDates(month, week, []);
       if (month) return drillVisibleDates(month, "", []);
       return classTargetDateRange("");
     }
@@ -4307,15 +4307,18 @@
     }
 
     function drillVisibleDates(month, week, rows) {
-      if (week) return drillWeekRange(month, week).filter((date) => date <= DRILL_MENU_DATE);
+      // A selected period can start today (for example, October Week 1 on 5 October).
+      // Keep the daily follow-up panel on yesterday's cutoff, but let explicit
+      // month/week filters show today's available Drill data and target students.
+      if (week) return drillWeekRange(month, week).filter((date) => date <= DASHBOARD_MIN_TODAY);
       if (month) {
         const periods = data.weeks
           .filter((item) => sameDrillMonth(item.month, month))
           .sort(comparePeriod);
         const dates = periods.flatMap((period) => drillWeekRange(period.month, period.week));
-        return [...new Set(dates)].filter((date) => date <= DRILL_MENU_DATE).sort();
+        return [...new Set(dates)].filter((date) => date <= DASHBOARD_MIN_TODAY).sort();
       }
-      return [...new Set(rows.map((row) => row.date))].filter((date) => date <= DRILL_MENU_DATE).sort();
+      return [...new Set(rows.map((row) => row.date))].filter((date) => date <= DASHBOARD_MIN_TODAY).sort();
     }
 
     function drillWeekRange(month, week) {
@@ -5989,12 +5992,48 @@
     }
 
     function normalizeData(source) {
-      const validKeys = new Set((source.weeks || []).filter((week) => week.month && week.week).map((week) => week.key));
+      const normalized = normalizeAttendancePeriods(source);
+      const validKeys = new Set((normalized.weeks || []).filter((week) => week.month && week.week).map((week) => week.key));
+      return {
+        ...normalized,
+        weeks: (normalized.weeks || []).filter((week) => validKeys.has(week.key)).sort(comparePeriod),
+        studentWeeks: (normalized.studentWeeks || []).filter((week) => validKeys.has(week.weekKey)),
+        records: (normalized.records || []).filter((record) => validKeys.has(record.weekKey))
+      };
+    }
+
+    function normalizeAttendancePeriods(source) {
+      const sourceWeeks = Array.isArray(source?.weeks) ? source.weeks : [];
+      const crossMonthTargets = new Set();
+      sourceWeeks.forEach((week) => {
+        const endMonth = canonicalDrillMonth(monthNameFromIso(week.end));
+        if (endMonth && canonicalDrillMonth(week.month) !== endMonth) crossMonthTargets.add(endMonth);
+      });
+      const labelsByKey = new Map();
+      crossMonthTargets.forEach((targetMonth) => {
+        sourceWeeks
+          .filter((week) => canonicalDrillMonth(monthNameFromIso(week.end)) === targetMonth)
+          .sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")))
+          .forEach((week, index) => labelsByKey.set(week.key, { month: targetMonth, week: `Week ${index + 1}` }));
+      });
+      const periodByKey = new Map();
+      const weeks = sourceWeeks.map((week) => {
+        const label = labelsByKey.get(week.key) || { month: week.month, week: week.week };
+        const key = `${label.month}|${label.week}|${week.start}`;
+        const normalizedWeek = { ...week, month: label.month, week: label.week, key, label: `${label.month} - ${label.week}`, weekOrder: weekNumber(label.week) };
+        periodByKey.set(week.key, normalizedWeek);
+        return normalizedWeek;
+      });
+      const remapItem = (item) => {
+        const period = periodByKey.get(item.weekKey);
+        if (!period) return item;
+        return { ...item, month: period.month, week: period.week, weekKey: period.key };
+      };
       return {
         ...source,
-        weeks: (source.weeks || []).filter((week) => validKeys.has(week.key)).sort(comparePeriod),
-        studentWeeks: (source.studentWeeks || []).filter((week) => validKeys.has(week.weekKey)),
-        records: (source.records || []).filter((record) => validKeys.has(record.weekKey))
+        weeks,
+        studentWeeks: (source.studentWeeks || []).map(remapItem),
+        records: (source.records || []).map(remapItem)
       };
     }
 
@@ -6025,8 +6064,9 @@
         const best = [...votes.entries()].sort((a, b) => b[1] - a[1])[0];
         if (!best) return;
         const [month, week] = best[0].split("|");
-        blocks.push({ monthIndex: index, weekIndex: index + 1, idealIndex: index + 2, month, week, order: blocks.length, dateColumns });
+        blocks.push({ monthIndex: index, weekIndex: index + 1, idealIndex: index + 2, sourceMonth: month, sourceWeek: week, month, week, order: blocks.length, dateColumns });
       });
+      normalizeAttendanceBlockLabels(blocks);
 
       const students = [];
       const records = [];
@@ -6065,6 +6105,25 @@
       });
       const weeks = [...weekMap.values()].sort(comparePeriod);
       return { generatedFrom: "Google Sheets refresh", studentCount: students.length, weekCount: weeks.length, branchTotals: branchLookup.branchTotals || {}, students, weeks, studentWeeks, records };
+    }
+
+    function normalizeAttendanceBlockLabels(blocks) {
+      const crossMonthTargets = new Set(blocks
+        .map((block) => canonicalDrillMonth(monthNameFromIso(block.dateColumns.at(-1)?.iso)))
+        .filter((month, index) => month && canonicalDrillMonth(blocks[index].sourceMonth) !== month));
+      crossMonthTargets.forEach((targetMonth) => {
+        blocks
+          .filter((block) => canonicalDrillMonth(monthNameFromIso(block.dateColumns.at(-1)?.iso)) === targetMonth)
+          .sort((a, b) => String(a.dateColumns[0]?.iso || "").localeCompare(String(b.dateColumns[0]?.iso || "")))
+          .forEach((block, index) => {
+            block.month = targetMonth;
+            block.week = `Week ${index + 1}`;
+          });
+      });
+      blocks.forEach((block, index) => {
+        block.order = index;
+        block.weekOrder = weekNumber(block.week);
+      });
     }
 
     function findAttendanceHeaderRow(rows) {

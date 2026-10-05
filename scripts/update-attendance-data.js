@@ -183,8 +183,9 @@ function buildAttendanceData(rows, branchLookup = new Map()) {
     const best = [...votes.entries()].sort((a, b) => b[1] - a[1])[0];
     if (!best) return;
     const [month, week] = best[0].split("|");
-    blocks.push({ monthIndex: index, weekIndex: index + 1, idealIndex: index + 2, month, week, order: blocks.length, dateColumns });
+    blocks.push({ monthIndex: index, weekIndex: index + 1, idealIndex: index + 2, sourceMonth: month, sourceWeek: week, month, week, order: blocks.length, dateColumns });
   });
+  normalizeAttendanceBlockLabels(blocks);
 
   const students = [];
   const records = [];
@@ -222,6 +223,28 @@ function buildAttendanceData(rows, branchLookup = new Map()) {
   });
   const weeks = [...weekMap.values()].sort(comparePeriod);
   return { generatedFrom: `Google Sheets ${new Date().toISOString()}`, studentCount: students.length, weekCount: weeks.length, branchTotals: branchLookup.branchTotals || {}, students, weeks, studentWeeks, records };
+}
+
+function normalizeAttendanceBlockLabels(blocks) {
+  const monthNameByNumber = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const monthNameFromIso = (iso) => monthNameByNumber[Number(String(iso || "").slice(5, 7)) - 1] || "";
+  const canonicalMonth = (month) => String(month || "").trim() === "Oktober" ? "Oktober" : String(month || "").trim();
+  const targetMonths = new Set(blocks
+    .map((block) => monthNameFromIso(block.dateColumns.at(-1)?.iso))
+    .filter((month, index) => month && canonicalMonth(blocks[index].sourceMonth) !== canonicalMonth(month)));
+  targetMonths.forEach((targetMonth) => {
+    blocks
+      .filter((block) => monthNameFromIso(block.dateColumns.at(-1)?.iso) === targetMonth)
+      .sort((a, b) => String(a.dateColumns[0]?.iso || "").localeCompare(String(b.dateColumns[0]?.iso || "")))
+      .forEach((block, index) => {
+        block.month = targetMonth;
+        block.week = `Week ${index + 1}`;
+      });
+  });
+  blocks.forEach((block, index) => {
+    block.order = index;
+    block.weekOrder = Number(String(block.week || "").match(/\d+/)?.[0] || 0);
+  });
 }
 
 (async () => {
