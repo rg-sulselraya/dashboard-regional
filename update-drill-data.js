@@ -192,6 +192,13 @@ function monthNameFromDate(value) {
   return new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${value}T00:00:00`));
 }
 
+function canonicalDrillWeek(week) {
+  const text = String(week || "").trim();
+  if (!text) return "";
+  const match = text.match(/(?:week|minggu)?\s*(\d+)/i);
+  return match ? `Week ${Number(match[1])}` : text;
+}
+
 function weekFromDate(value) {
   if (!String(value || "").match(/^\d{4}-\d{2}-\d{2}$/)) return "";
   const date = new Date(`${value}T00:00:00`);
@@ -320,7 +327,7 @@ function buildDrillData(rows, studentLookup = new Map()) {
       date,
       dateLabel: safeFormatLongDate(date),
       month: month || monthNameFromDate(date),
-      week: week || weekFromDate(date),
+      week: canonicalDrillWeek(week || weekFromDate(date)),
       correct,
       wrong,
       blank,
