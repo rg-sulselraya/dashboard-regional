@@ -661,6 +661,8 @@
             <button id="downloadDrillPdfBtn" class="download-pdf" title="Unduh PDF Drill" aria-label="Unduh PDF Drill"><span>↓</span><span>PDF</span></button>
             <button id="downloadDrillImageBtn" class="download-image" title="Unduh gambar Drill" aria-label="Unduh gambar Drill"><span>↓</span><span>PNG</span></button>
             <button id="shareDrillWhatsAppBtn" class="download-image" title="Kirim PNG melalui WhatsApp" aria-label="Kirim PNG melalui WhatsApp" hidden><span>↗</span><span>Kirim WA</span></button>
+            <button id="sharePreparedDrillBtn" class="download-image" title="Bagikan PNG yang sudah dibuat" aria-label="Bagikan PNG yang sudah dibuat" hidden disabled><span>↗</span><span>Bagikan PNG</span></button>
+            <span id="drillExportStatus" class="pill" role="status" aria-live="polite" hidden></span>
             <span class="pill" id="drillDateCount">0 tanggal</span>
           </div>
         </div>
@@ -764,7 +766,7 @@
     let prepostLoadPromise = null;
     let prepostSubjectChart = null;
     let shareDrillImage = false;
-    let drillWhatsAppWindow = null;
+    let preparedDrillShareFile = null;
       let drillMode = "student";
       let selectedDrillGrade = "12 SMA";
       let inactiveDrillStatusFilter = "";
@@ -787,6 +789,8 @@
     let weekNames = [];
     const statusColors = { Hadir: "#10B981", Izin: "#F58220", Sakit: "#7c5ce7", Alpa: "#ef4444" };
     const numberFmt = new Intl.NumberFormat("id-ID");
+    // Tahap simulasi: tidak membuka WhatsApp, popup, atau mengirim request eksternal.
+    const DRILL_WHATSAPP_MODE = "simulation";
     const percentLabelPlugin = {
       id: "percentLabelPlugin",
       afterDatasetsDraw(chart) {
@@ -898,15 +902,9 @@
       $("downloadDrillImageBtn").addEventListener("click", downloadDrillImage);
       $("shareDrillWhatsAppBtn").addEventListener("click", () => {
         shareDrillImage = true;
-        // Open WhatsApp directly during the click gesture so desktop browsers do not
-        // leave an about:blank window after the asynchronous PNG rendering completes.
-        if (!navigator.share) {
-          const studentName = $("drillStudentInput").value.trim() || "Siswa";
-          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Rekap Drill ${studentName}. File PNG sedang disiapkan, silakan lampirkan setelah terunduh.`)}`;
-          drillWhatsAppWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-        }
         downloadDrillImage();
       });
+      $("sharePreparedDrillBtn").addEventListener("click", sharePreparedDrillPng);
       $("refreshBtn").addEventListener("click", refreshData);
       $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
       $("studentRows").addEventListener("submit", handleAttendanceEditSubmit);
@@ -5787,7 +5785,88 @@
       printWindow.document.close();
     }
 
+    function setDrillExportStatus(message, tone = "") {
+      const status = $("drillExportStatus");
+      if (!status) return;
+      status.hidden = !message;
+      status.textContent = message;
+      status.dataset.tone = tone;
+    }
+
+    function validateDrillPngExport(blob, fileName, width, height) {
+      if (!(blob instanceof Blob)) throw new Error("Hasil PNG tidak tersedia.");
+      if (blob.type !== "image/png") throw new Error("Format hasil bukan PNG.");
+      if (blob.size <= 0) throw new Error("Ukuran PNG kosong.");
+      if (!fileName || !/\.png$/i.test(fileName)) throw new Error("Nama file PNG tidak valid.");
+      if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) throw new Error("Dimensi laporan tidak valid.");
+      return { size: blob.size, fileName, width, height };
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function canShareDrillFile(shareApi, canShareApi, file) {
+      return Boolean(typeof shareApi === "function" && typeof canShareApi === "function" && canShareApi({ files: [file] }));
+    }
+
+    function drillShareErrorStatus(error) {
+      if (error?.name === "AbortError") return "Dialog berbagi dibatalkan.";
+      if (error?.name === "NotAllowedError") return "Berbagi ditolak browser; gunakan tombol Bagikan setelah PNG selesai dibuat.";
+      return "Gagal membuka dialog berbagi.";
+    }
+
+    function clearPreparedDrillShare() {
+      preparedDrillShareFile = null;
+      const button = $("sharePreparedDrillBtn");
+      if (button) {
+        button.hidden = true;
+        button.disabled = true;
+      }
+    }
+
+    function sharePreparedDrillPng() {
+      const file = preparedDrillShareFile;
+      const button = $("sharePreparedDrillBtn");
+      if (!file || button?.disabled) return;
+      if (DRILL_WHATSAPP_MODE === "simulation") {
+        setDrillExportStatus("Simulasi: PNG siap dibagikan; Web Share tidak dijalankan.", "success");
+        return;
+      }
+      if (typeof File === "undefined" || typeof navigator.share !== "function") {
+        button.disabled = true;
+        openWhatsAppDownloadFallback(file, file.name, "Berbagi file tidak didukung; PNG diunduh untuk lampiran manual.");
+        button.disabled = false;
+        return;
+      }
+      if (!canShareDrillFile(navigator.share, navigator.canShare, file)) {
+        button.disabled = true;
+        openWhatsAppDownloadFallback(file, file.name, "Berbagi file tidak didukung; PNG diunduh untuk lampiran manual.");
+        button.disabled = false;
+        return;
+      }
+      button.disabled = true;
+      setDrillExportStatus("Membuka dialog berbagi…", "loading");
+      // Intentionally no asynchronous work before this user-initiated call.
+      navigator.share({ title: "Rekap Drill Siswa", text: "Rekap Drill Siswa", files: [file] }).then(() => {
+        button.disabled = false;
+        setDrillExportStatus("Dialog berbagi dibuka; periksa sebelum mengirim.", "success");
+      }).catch((error) => {
+        button.disabled = false;
+        setDrillExportStatus(drillShareErrorStatus(error), "error");
+      });
+    }
+
     async function downloadDrillImage() {
+      const imageButton = $("downloadDrillImageBtn");
+      const shareButton = $("shareDrillWhatsAppBtn");
+      if (imageButton?.disabled || shareButton?.disabled) return;
+      clearPreparedDrillShare();
+      if (imageButton) imageButton.disabled = true;
+      if (shareButton) shareButton.disabled = true;
+      setDrillExportStatus("Membuat PNG…", "loading");
       const selectedStudent = drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "";
       const selectedStudentRecord = findSelectedDrillStudent(selectedStudent);
       const selectedClass = drillMode === "student" ? (selectedStudentRecord?.class || "") : $("drillClassSelect").value;
@@ -5797,6 +5876,10 @@
       const activeDates = currentDrillDates.length ? currentDrillDates : [date].filter(Boolean);
       const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       if (!activeDates.length) {
+        shareDrillImage = false;
+        if (imageButton) imageButton.disabled = false;
+        if (shareButton) shareButton.disabled = false;
+        setDrillExportStatus("Gagal: tidak ada tanggal drill.", "error");
         alert("Tidak ada tanggal drill sesuai filter saat ini.");
         return;
       }
@@ -5809,6 +5892,10 @@
       });
       const displayRows = drillDisplayRows(rows, selectedClass, activeDates[0] || date, selectedStudent, activeDates);
       if (!displayRows.length) {
+        shareDrillImage = false;
+        if (imageButton) imageButton.disabled = false;
+        if (shareButton) shareButton.disabled = false;
+        setDrillExportStatus("Gagal: tidak ada data siswa.", "error");
         alert("Tidak ada data siswa untuk filter drill saat ini.");
         return;
       }
@@ -5989,26 +6076,40 @@
 
       canvas.toBlob((blob) => {
         if (!blob) {
+          shareDrillImage = false;
+          imageButton.disabled = false;
+          shareButton.disabled = false;
+          setDrillExportStatus("Gagal membuat PNG: hasil kosong.", "error");
           alert("Gambar gagal dibuat.");
+          return;
+        }
+        const fileName = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "rekap-drill"}.png`;
+        try {
+          const exportInfo = validateDrillPngExport(blob, fileName, canvas.width, canvas.height);
+          setDrillExportStatus(`PNG berhasil dibuat · ${formatFileSize(exportInfo.size)}`, "success");
+        } catch (error) {
+          shareDrillImage = false;
+          imageButton.disabled = false;
+          shareButton.disabled = false;
+          setDrillExportStatus(`Gagal membuat PNG: ${error.message}`, "error");
+          alert(`Gambar gagal dibuat: ${error.message}`);
           return;
         }
         if (shareDrillImage) {
           shareDrillImage = false;
-          const fileName = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "rekap-drill"}.png`;
           const file = new File([blob], fileName, { type: "image/png" });
-          const canShareDrillFile = Boolean(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
-          if (canShareDrillFile) {
-            navigator.share({ title: `Rekap Drill ${selectedStudentRecord?.name || "Siswa"}`, text: "Rekap Drill Siswa", files: [file] }).then(() => {
-              if (drillWhatsAppWindow && !drillWhatsAppWindow.closed) drillWhatsAppWindow.close();
-              drillWhatsAppWindow = null;
-            }).catch((error) => {
-              if (error?.name !== "AbortError") openWhatsAppDownloadFallback(blob, fileName, selectedStudentRecord?.name || selectedStudent || "Siswa", drillWhatsAppWindow);
-              drillWhatsAppWindow = null;
-            });
-            return;
-          }
-          openWhatsAppDownloadFallback(blob, fileName, selectedStudentRecord?.name || selectedStudent || "Siswa", drillWhatsAppWindow);
-          drillWhatsAppWindow = null;
+          preparedDrillShareFile = file;
+          const preparedButton = $("sharePreparedDrillBtn");
+          preparedButton.hidden = false;
+          preparedButton.disabled = false;
+          imageButton.disabled = false;
+          shareButton.disabled = false;
+          setDrillExportStatus(
+            DRILL_WHATSAPP_MODE === "simulation"
+              ? `Simulasi selesai · PNG siap (${formatFileSize(blob.size)})`
+              : `PNG siap dibagikan · ${formatFileSize(blob.size)}`,
+            "success"
+          );
           return;
         }
         const link = document.createElement("a");
@@ -6021,10 +6122,12 @@
           URL.revokeObjectURL(link.href);
           link.remove();
         }, 1000);
+        imageButton.disabled = false;
+        shareButton.disabled = false;
       }, "image/png");
     }
 
-    function openWhatsAppDownloadFallback(blob, fileName, studentName, whatsappWindow = null) {
+    function openWhatsAppDownloadFallback(blob, fileName, statusMessage = "PNG diunduh; silakan lampirkan secara manual ke grup WhatsApp.") {
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
@@ -6036,10 +6139,7 @@
         URL.revokeObjectURL(objectUrl);
         link.remove();
       }, 1000);
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Rekap Drill ${studentName}. File PNG sudah diunduh, silakan lampirkan ke chat WhatsApp.`)}`;
-      const targetWindow = whatsappWindow && !whatsappWindow.closed ? whatsappWindow : window.open("about:blank", "_blank");
-      if (targetWindow) targetWindow.location.href = whatsappUrl;
-      else alert("WhatsApp tidak dapat dibuka oleh browser. PNG sudah diunduh, silakan buka WhatsApp secara manual.");
+      setDrillExportStatus(statusMessage, "success");
     }
 
     function loadExportImage(source) {
