@@ -901,7 +901,7 @@
         // Open WhatsApp directly during the click gesture so desktop browsers do not
         // leave an about:blank window after the asynchronous PNG rendering completes.
         if (!navigator.share) {
-          const studentName = selectedStudentRecord?.name || selectedStudent || "Siswa";
+          const studentName = $("drillStudentInput").value.trim() || "Siswa";
           const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Rekap Drill ${studentName}. File PNG sedang disiapkan, silakan lampirkan setelah terunduh.`)}`;
           drillWhatsAppWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
         }
