@@ -35,7 +35,7 @@ assert.equal(drillShareErrorStatus({ name: "AbortError" }), "Dialog berbagi diba
 assert.match(drillShareErrorStatus({ name: "NotAllowedError" }), /user activation|tombol Bagikan/i);
 assert.equal(drillShareErrorStatus({ name: "TypeError" }), "Gagal membuka dialog berbagi.");
 
-assert.equal(source.includes('const DRILL_WHATSAPP_MODE = "simulation";'), true);
+assert.equal(source.includes('const DRILL_WHATSAPP_MODE = "production";'), true);
 assert.equal(source.includes('if (DRILL_WHATSAPP_MODE === "simulation")'), true);
 assert.equal(source.includes("https://wa.me/"), false, "simulasi dan fallback tidak mogen membuka wa.me");
 assert.equal(source.includes('window.open(whatsappUrl'), false, "simulasi dan fallback tidak boleh membuka popup WhatsApp");
