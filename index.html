@@ -660,6 +660,7 @@
           <div class="table-tools">
             <button id="downloadDrillPdfBtn" class="download-pdf" title="Unduh PDF Drill" aria-label="Unduh PDF Drill"><span>↓</span><span>PDF</span></button>
             <button id="downloadDrillImageBtn" class="download-image" title="Unduh gambar Drill" aria-label="Unduh gambar Drill"><span>↓</span><span>PNG</span></button>
+            <button id="shareDrillWhatsAppBtn" class="download-image" title="Kirim PNG melalui WhatsApp" aria-label="Kirim PNG melalui WhatsApp" hidden><span>↗</span><span>Kirim WA</span></button>
             <span class="pill" id="drillDateCount">0 tanggal</span>
           </div>
         </div>
@@ -762,6 +763,8 @@
     let prepostLoaded = false;
     let prepostLoadPromise = null;
     let prepostSubjectChart = null;
+    let shareDrillImage = false;
+    let drillWhatsAppWindow = null;
       let drillMode = "student";
       let selectedDrillGrade = "12 SMA";
       let inactiveDrillStatusFilter = "";
@@ -893,6 +896,17 @@
       $("drillSummaryGrid").addEventListener("click", handleDrillSummaryClick);
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
       $("downloadDrillImageBtn").addEventListener("click", downloadDrillImage);
+      $("shareDrillWhatsAppBtn").addEventListener("click", () => {
+        shareDrillImage = true;
+        // Open WhatsApp directly during the click gesture so desktop browsers do not
+        // leave an about:blank window after the asynchronous PNG rendering completes.
+        if (!navigator.share) {
+          const studentName = selectedStudentRecord?.name || selectedStudent || "Siswa";
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Rekap Drill ${studentName}. File PNG sedang disiapkan, silakan lampirkan setelah terunduh.`)}`;
+          drillWhatsAppWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        }
+        downloadDrillImage();
+      });
       $("refreshBtn").addEventListener("click", refreshData);
       $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
       $("studentRows").addEventListener("submit", handleAttendanceEditSubmit);
@@ -3163,6 +3177,7 @@
       }
       const isAllClassDrill = !selectedStudent && !selectedClass;
       const hasStudentFilter = Boolean(selectedStudent);
+      $("shareDrillWhatsAppBtn").hidden = !hasStudentFilter;
       const hasClassFilter = Boolean(selectedClass);
       currentDrillDates = dates;
       if (selectedDrillDate && !dates.includes(selectedDrillDate)) selectedDrillDate = "";
@@ -5977,12 +5992,43 @@
           alert("Gambar gagal dibuat.");
           return;
         }
+        if (shareDrillImage) {
+          shareDrillImage = false;
+          const fileName = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "rekap-drill"}.png`;
+          const file = new File([blob], fileName, { type: "image/png" });
+          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+            navigator.share({ title: `Rekap Drill ${selectedStudentRecord?.name || "Siswa"}`, text: "Rekap Drill Siswa", files: [file] }).then(() => {
+              if (drillWhatsAppWindow && !drillWhatsAppWindow.closed) drillWhatsAppWindow.close();
+              drillWhatsAppWindow = null;
+            }).catch((error) => {
+              if (error?.name !== "AbortError") openWhatsAppDownloadFallback(blob, fileName, selectedStudentRecord?.name || selectedStudent || "Siswa", drillWhatsAppWindow);
+              drillWhatsAppWindow = null;
+            });
+            return;
+          }
+          openWhatsAppDownloadFallback(blob, fileName, selectedStudentRecord?.name || selectedStudent || "Siswa", drillWhatsAppWindow);
+          drillWhatsAppWindow = null;
+          return;
+        }
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "rekap-drill"}.png`;
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
       }, "image/png");
+    }
+
+    function openWhatsAppDownloadFallback(blob, fileName, studentName, whatsappWindow = null) {
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Rekap Drill ${studentName}. File PNG sudah diunduh, silakan lampirkan ke chat WhatsApp.`)}`;
+      const targetWindow = whatsappWindow && !whatsappWindow.closed ? whatsappWindow : window.open("about:blank", "_blank");
+      if (targetWindow) targetWindow.location.href = whatsappUrl;
+      else alert("WhatsApp tidak dapat dibuka oleh browser. PNG sudah diunduh, silakan buka WhatsApp secara manual.");
     }
 
     function loadExportImage(source) {
