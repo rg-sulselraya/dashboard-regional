@@ -697,9 +697,28 @@
     </section>
 
     <section class="view" id="prepostView" hidden>
-      <div class="panel placeholder">
-        <h2>Pre test & Post test Siswa</h2>
-        <p>Menu ini disiapkan untuk monitoring pre test dan post test siswa.</p>
+      <section class="filters" aria-label="Filter pretest postest">
+        <label>Kelas<select id="prepostClassSelect"><option value="">Semua kelas</option></select></label>
+        <label>Siswa<input id="prepostStudentSearch" type="search" list="prepostStudentSuggestions" placeholder="Cari nama siswa"><datalist id="prepostStudentSuggestions"></datalist></label>
+        <label>Bulan<select id="prepostMonthSelect"><option value="">Semua bulan</option></select></label>
+        <label>Week<select id="prepostWeekSelect"><option value="">Semua week</option></select></label>
+      </section>
+      <section class="stats" id="prepostStats">
+        <div class="stat"><div class="label">Siswa</div><div class="value" id="prepostStudentCount">0</div><div class="hint">sesuai filter</div></div>
+        <div class="stat"><div class="label">Rata-rata Quiz</div><div class="value ideal" id="prepostQuizAverage">-</div><div class="hint">nilai pretest/quiz</div></div>
+        <div class="stat"><div class="label">Rata-rata Postest</div><div class="value good" id="prepostPostAverage">-</div><div class="hint">nilai postest</div></div>
+      </section>
+      <div class="panel" id="prepostChartPanel" hidden>
+        <div class="panel-head"><h2>Pencapaian Quiz & Postest per Mata Pelajaran</h2></div>
+        <div class="chartbox"><canvas id="prepostSubjectChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Rekap Pretest & Postest per Cabang / Kelas / Siswa</h2><span class="pill" id="prepostDataStatus">Memuat data QP...</span></div>
+        <div class="table-wrap"><table><thead id="prepostTableHead"><tr><th>Cabang</th><th>Kelas</th><th>Nama Siswa</th><th>Quiz</th><th>Postest</th></tr></thead><tbody id="prepostRows"></tbody></table><div class="empty" id="prepostEmpty" hidden>Tidak ada data pretest/postest yang cocok.</div></div>
+      </div>
+      <div class="panel" id="prepostDetailPanel" hidden>
+        <div class="panel-head"><h2 id="prepostDetailTitle">Detail Quiz dan Postest Siswa</h2></div>
+        <div class="table-wrap"><table><thead><tr><th>Nama Siswa</th><th>Quiz</th><th>Postest</th></tr></thead><tbody id="prepostDetailRows"></tbody></table></div>
       </div>
     </section>
   </main>
@@ -713,6 +732,7 @@
     const LIVE_DRILL_SCHEMA_VERSION = 10;
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const REMOTE_BUNDLED_DATA_BASE_URL = "https://raw.githubusercontent.com/rg-sulselraya/dashboard-regional/main";
+    const PREPOST_SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1CexZSRdnsicD6iaczf7FGtjLAp9DE6o8G-Glnzxb8io";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
     const DRILL_MENU_DATE = offsetIsoDate(DASHBOARD_MIN_TODAY, -1);
@@ -738,6 +758,10 @@
     let expandedAttendanceStudent = "";
     let expandedAttendanceClass = "";
     let editingAttendanceKey = "";
+    let prepostRows = [];
+    let prepostLoaded = false;
+    let prepostLoadPromise = null;
+    let prepostSubjectChart = null;
       let drillMode = "student";
       let selectedDrillGrade = "12 SMA";
       let inactiveDrillStatusFilter = "";
@@ -906,6 +930,11 @@
         scheduleDrillRender();
       });
       document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
+      ["prepostClassSelect", "prepostStudentSearch", "prepostMonthSelect", "prepostWeekSelect"].forEach((id) => {
+        $(id).addEventListener("input", renderPrepost);
+        $(id).addEventListener("change", renderPrepost);
+      });
+      $("branchSelect").addEventListener("change", () => { if (!$('prepostView').hidden) renderPrepost(); });
       updateDataSourceStatus("Memuat data live");
       await refreshData({ silent: true, keepFilters: true });
       render();
@@ -942,11 +971,188 @@
         syncAttendanceFiltersToDrill();
         loadDrillData();
         scheduleDrillRender();
+      } else if (viewId === "prepostView") {
+        loadPrepostData();
       } else {
         if (viewId === "attendanceView") syncDrillFiltersToAttendance();
         window.setTimeout(render, 0);
       }
       saveFilterState();
+    }
+
+    async function loadPrepostData() {
+      if (prepostLoaded) return renderPrepost();
+      if (!prepostLoadPromise) {
+        prepostLoadPromise = loadPrepostSheetRows().then((rows) => {
+          prepostRows = buildPrepostRows(rows);
+          prepostLoaded = true;
+          renderPrepostFilters();
+          renderPrepost();
+          return prepostRows;
+        }).catch((error) => {
+          console.warn("Data QP gagal dimuat:", error);
+          $("prepostDataStatus").textContent = "Data QP belum tersedia — klik Refresh";
+          $("prepostEmpty").hidden = false;
+          prepostLoadPromise = null;
+          return [];
+        });
+      }
+      return prepostLoadPromise;
+    }
+
+    async function loadPrepostSheetRows() {
+      try {
+        if (USE_NETLIFY_PROXY) {
+          try {
+            const proxyResponse = await fetch(`${SHEET_PROXY_URL}?source=prepost&gid=0&cachebust=${Date.now()}`, { cache: "no-store" });
+            if (proxyResponse.ok) return validateSheetRows(parseCsv(await proxyResponse.text()));
+          } catch (proxyError) { console.warn("Proxy QP gagal, mencoba langsung:", proxyError); }
+        }
+        const response = await fetch(`${PREPOST_SHEET_BASE_URL}/export?format=csv&gid=0&cachebust=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return validateSheetRows(parseCsv(await response.text()));
+      } catch (error) {
+        console.warn("Sheet QP baru direct gagal, mencoba JSONP:", error);
+        return loadPrepostSheetFallback();
+      }
+    }
+
+    function loadPrepostSheetFallback() {
+      return new Promise((resolve, reject) => {
+        const callbackName = `prepostSheet_${Date.now()}_${Math.random().toString(36).slice(2)}`.replace(/[^a-zA-Z0-9_$]/g, "_");
+        const script = document.createElement("script");
+        const timeout = window.setTimeout(() => { cleanup(); reject(new Error("Fallback QP timeout")); }, 20000);
+        function cleanup() { window.clearTimeout(timeout); script.remove(); delete window[callbackName]; }
+        window[callbackName] = (payload) => { cleanup(); if (!payload || payload.status !== "ok") reject(new Error(payload?.status || "QP tidak dapat dibaca")); else resolve(validateSheetRows(gvizToRowsWithHeaders(payload))); };
+        script.onerror = () => { cleanup(); reject(new Error("Fallback QP gagal")); };
+        script.src = `${PREPOST_SHEET_BASE_URL}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&headers=1&gid=0&cachebust=${Date.now()}`;
+        document.body.appendChild(script);
+      });
+    }
+
+    function gvizToRowsWithHeaders(payload) {
+      const headers = (payload.table?.cols || []).map((column, index) => column.label || column.id || `Column ${index + 1}`);
+      return [headers, ...gvizToRows(payload)];
+    }
+
+    function buildPrepostRows(rows) {
+      if (!Array.isArray(rows) || rows.length < 2) return [];
+      const headers = rows[0].map((value) => normalizeLookup(value));
+      const find = (patterns) => headers.findIndex((header) => patterns.some((pattern) => header.includes(pattern)));
+      const nameIndex = find(["nama siswa", "nama", "student", "name"]);
+      const classIndex = find(["kelas", "class", "rombel"]);
+      const branchIndex = find(["cabang", "branch", "area"]);
+      const typeIndex = 15;
+      const topicIndex = find(["topic", "topik", "materi"]);
+      const subjectIndex = find(["subject", "mata pelajaran", "mapel"]);
+      const attendanceStatusIndex = find(["attendancestatus", "attendance status", "status kehadiran"]);
+      const examIndex = 17;
+      const dateIndex = 12;
+      const scoreIndex = find(["avgscore", "average score", "rata-rata score", "score", "nilai"]);
+      if (nameIndex < 0) return [];
+      const numeric = (value) => { const n = Number(String(value ?? "").replace(/[% ]/g, "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
+      const grouped = new Map();
+      rows.slice(1).forEach((row) => {
+        const type = String(row[typeIndex] || "").trim().toLowerCase();
+        const topic = String(row[topicIndex] || "").trim().toLowerCase();
+        const attendanceStatus = String(row[attendanceStatusIndex] || "").trim().toLowerCase();
+        const date = normalizePrepostDate(row[dateIndex]);
+        const score = numeric(row[scoreIndex]);
+        const student = String(row[nameIndex] || "").trim();
+        if (!student || score === null || !["attend", "late"].includes(attendanceStatus) || /file-image|permission|attendancestatus/.test(type)) return;
+        const key = `${row[branchIndex] || "-"}|${row[classIndex] || "-"}|${student}`;
+        const item = grouped.get(key) || { branch: String(row[branchIndex] || "-").trim() || "-", className: String(row[classIndex] || "-").trim() || "-", student, quizValues: [], postValues: [], dates: [], quizDates: [], postDates: [], activities: [] };
+        if (date) item.dates.push(date);
+        const examValue = numeric(row[examIndex]) ?? 0;
+        if (/post\s*test|postest|postes/.test(type) || /post\s*test|postest|postes/.test(topic)) { item.postValues.push(score); if (date) item.postDates.push(date); item.activities.push({ date, subject: String(row[subjectIndex] || "-").trim() || "-", topic: String(row[topicIndex] || "-").trim() || "-", kind: "post", score, exam: examValue }); }
+        else if (/quiz|kuis|pre\s*test|pretest/.test(type) || /quiz|kuis|pre\s*test|pretest/.test(topic)) { item.quizValues.push(score); if (date) item.quizDates.push(date); item.activities.push({ date, subject: String(row[subjectIndex] || "-").trim() || "-", topic: String(row[topicIndex] || "-").trim() || "-", kind: "quiz", score, exam: examValue }); }
+        grouped.set(key, item);
+      });
+      return [...grouped.values()].map((item) => { const date = item.dates.sort().at(-1) || ""; return { ...item, date, month: date ? new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${date}T00:00:00`)) : "", week: date ? prepostWeekForDate(date) : "", quiz: item.quizValues.length ? item.quizValues.reduce((sum, value) => sum + value, 0) / item.quizValues.length : null, post: item.postValues.length ? item.postValues.reduce((sum, value) => sum + value, 0) / item.postValues.length : null }; }).filter((row) => row.quiz !== null || row.post !== null);
+    }
+
+    function normalizePrepostDate(value) {
+      const text = String(value || "").trim();
+      let match = text.match(/^(\d{1,2})[\s/-]+([A-Za-z]+)[\s/-]+(\d{4})/);
+      if (match) { const months = { jan: 1, feb: 2, mar: 3, apr: 4, mei: 5, may: 5, jun: 6, jul: 7, agu: 8, aug: 8, sep: 9, okt: 10, oct: 10, nov: 11, des: 12, dec: 12 }; const month = months[match[2].slice(0, 3).toLowerCase()]; if (month) return `${match[3]}-${String(month).padStart(2, "0")}-${String(match[1]).padStart(2, "0")}`; }
+      const parsed = new Date(text); return Number.isNaN(parsed.getTime()) ? "" : `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+    }
+
+    function prepostWeekForDate(iso) { const date = new Date(`${iso}T00:00:00`); const monday = new Date(date); const day = monday.getDay() || 7; monday.setDate(monday.getDate() - day + 1); return `Week ${Math.floor((monday.getDate() - 1) / 7) + 1}`; }
+
+    function renderPrepostFilters() {
+      const classSelect = $("prepostClassSelect");
+      const currentClass = classSelect.value;
+      const activeBranch = $("branchSelect").value;
+      const currentMonth = $("prepostMonthSelect").value;
+      const currentWeek = $("prepostWeekSelect").value;
+      const sourceRows = prepostRows.filter((row) => !activeBranch || row.branch === activeBranch);
+      const classes = [...new Set(sourceRows.map((row) => row.className))].sort(compareClass);
+      classSelect.innerHTML = `<option value="">Semua kelas</option>${classes.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+      classSelect.value = classes.includes(currentClass) ? currentClass : "";
+      const months = [...new Set(sourceRows.map((row) => row.month).filter(Boolean))];
+      $("prepostMonthSelect").innerHTML = `<option value="">Semua bulan</option>${months.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+      $("prepostMonthSelect").value = months.includes(currentMonth) ? currentMonth : "";
+      const weeks = [...new Set(sourceRows.filter((row) => !$("prepostMonthSelect").value || row.month === $("prepostMonthSelect").value).map((row) => row.week).filter(Boolean))];
+      $("prepostWeekSelect").innerHTML = `<option value="">Semua week</option>${weeks.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+      $("prepostWeekSelect").value = weeks.includes(currentWeek) ? currentWeek : "";
+      const students = [...new Set(sourceRows.filter((row) => !$("prepostClassSelect").value || row.className === $("prepostClassSelect").value).map((row) => row.student))].sort((a, b) => a.localeCompare(b, "id"));
+      $("prepostStudentSuggestions").innerHTML = students.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+    }
+
+    function renderPrepost() {
+      if (!$("prepostRows")) return;
+      if (prepostLoaded) renderPrepostFilters();
+      const branch = $("branchSelect").value;
+      const className = $("prepostClassSelect").value;
+      const search = normalizeLookup($("prepostStudentSearch").value);
+      const month = $("prepostMonthSelect").value;
+      const week = $("prepostWeekSelect").value;
+      const matchesPeriod = (row) => { const dates = [...(row.quizDates || []), ...(row.postDates || []), ...(row.dates || [])]; return !month && !week || dates.some((date) => (!month || new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${date}T00:00:00`)) === month) && (!week || prepostWeekForDate(date) === week)); };
+      const rows = prepostRows.filter((row) => (!branch || row.branch === branch) && ((!className || row.className === className) || Boolean(search)) && matchesPeriod(row) && (!search || normalizeLookup(row.student).includes(search)));
+      const fmt = (value) => value === null ? "-" : value.toFixed(1).replace(".", ",");
+      const delta = (row) => row.quiz !== null && row.post !== null ? row.post - row.quiz : null;
+      const inSelectedPeriod = (date) => (!month || new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${date}T00:00:00`)) === month) && (!week || prepostWeekForDate(date) === week);
+      const classSummaryMode = !className && !search;
+      const studentSummaryMode = Boolean(className);
+      const studentDetailMode = Boolean(search);
+      $("prepostTableHead").innerHTML = classSummaryMode ? "<tr><th>Kelas</th><th>#Quiz</th><th>#Postest</th></tr>" : studentDetailMode ? "<tr><th>Tanggal</th><th>Subject</th><th>Topic</th><th>#Exam Quiz</th><th>#Exam Postest</th><th>Nilai Quiz</th><th>Nilai Postest</th></tr>" : studentSummaryMode ? "<tr><th>Nama Siswa</th><th>#Quiz</th><th>#Postest</th></tr>" : "<tr><th>Cabang</th><th>Kelas</th><th>Nama Siswa</th><th>Quiz</th><th>Postest</th></tr>";
+      if (classSummaryMode) {
+        const summaries = new Map();
+        rows.forEach((row) => { const item = summaries.get(row.className) || { quiz: new Set(), post: new Set() }; if ((row.quizDates || []).some((date) => (!month || new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${date}T00:00:00`)) === month) && (!week || prepostWeekForDate(date) === week))) item.quiz.add(row.student); if ((row.postDates || []).some((date) => (!month || new Intl.DateTimeFormat("id-ID", { month: "long" }).format(new Date(`${date}T00:00:00`)) === month) && (!week || prepostWeekForDate(date) === week))) item.post.add(row.student); summaries.set(row.className, item); });
+        $("prepostRows").innerHTML = [...summaries.entries()].sort((a, b) => compareClass(a[0], b[0])).map(([name, item]) => `<tr><td>${escapeHtml(name)}</td><td>${item.quiz.size}</td><td>${item.post.size}</td></tr>`).join("");
+      } else if (studentDetailMode) {
+        const detailMap = new Map();
+        rows.forEach((row) => (row.activities || []).filter((activity) => inSelectedPeriod(activity.date)).forEach((activity) => { const key = `${activity.date}|${activity.subject}|${activity.topic}`; const item = detailMap.get(key) || { date: activity.date, subject: activity.subject, topic: activity.topic, quizExams: 0, postExams: 0, quizScores: [], postScores: [] }; if (activity.kind === "quiz") { item.quizExams += activity.exam; item.quizScores.push(activity.score); } else { item.postExams += activity.exam; item.postScores.push(activity.score); } detailMap.set(key, item); }));
+        const details = [...detailMap.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        const detailFmt = (value) => value === null || value === undefined ? "-" : Number(value).toFixed(1).replace(".", ",");
+        const scoreAverage = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+        $("prepostRows").innerHTML = details.map((item) => `<tr><td>${escapeHtml(item.date || "-")}</td><td>${escapeHtml(item.subject)}</td><td>${escapeHtml(item.topic)}</td><td>${item.quizExams}</td><td>${item.postExams}</td><td>${detailFmt(scoreAverage(item.quizScores))}</td><td>${detailFmt(scoreAverage(item.postScores))}</td></tr>`).join("");
+        renderPrepostSubjectChart(details, scoreAverage);
+      } else if (studentSummaryMode) {
+        $("prepostChartPanel").hidden = true;
+        const summaries = new Map();
+        rows.forEach((row) => { const item = summaries.get(row.student) || { quiz: 0, post: 0 }; item.quiz += (row.quizDates || []).filter(inSelectedPeriod).length; item.post += (row.postDates || []).filter(inSelectedPeriod).length; summaries.set(row.student, item); });
+        $("prepostRows").innerHTML = [...summaries.entries()].sort((a, b) => a[0].localeCompare(b[0], "id")).map(([name, item]) => `<tr><td>${escapeHtml(name)}</td><td>${item.quiz}</td><td>${item.post}</td></tr>`).join("");
+      } else { $("prepostChartPanel").hidden = true; $("prepostRows").innerHTML = rows.map((row) => `<tr><td>${escapeHtml(row.branch)}</td><td>${escapeHtml(row.className)}</td><td>${escapeHtml(row.student)}</td><td>${fmt(row.quiz)}</td><td>${fmt(row.post)}</td></tr>`).join(""); }
+      $("prepostEmpty").hidden = rows.length > 0;
+      $("prepostStudentCount").textContent = rows.length;
+      const avg = (key) => { const values = rows.map((row) => row[key]).filter((value) => value !== null); return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null; };
+      $("prepostQuizAverage").textContent = fmt(avg("quiz"));
+      $("prepostPostAverage").textContent = fmt(avg("post"));
+      $("prepostDataStatus").textContent = prepostLoaded ? `${prepostRows.length} data dari sheet QP` : "Memuat data QP...";
+      const detailRows = rows.filter((row) => row.student).slice(0, 200);
+      $("prepostDetailPanel").hidden = true;
+    }
+
+    function renderPrepostSubjectChart(details, scoreAverage) {
+      const subjectMap = new Map();
+      details.forEach((item) => { const entry = subjectMap.get(item.subject) || { quiz: [], post: [] }; entry.quiz.push(...item.quizScores); entry.post.push(...item.postScores); subjectMap.set(item.subject, entry); });
+      const labels = [...subjectMap.keys()];
+      if (!labels.length || typeof Chart === "undefined") { $("prepostChartPanel").hidden = true; return; }
+      $("prepostChartPanel").hidden = false;
+      if (prepostSubjectChart) prepostSubjectChart.destroy();
+      prepostSubjectChart = new Chart($("prepostSubjectChart"), { type: "bar", data: { labels, datasets: [{ label: "Quiz", data: labels.map((label) => scoreAverage(subjectMap.get(label).quiz)), backgroundColor: "#64748b" }, { label: "Postest", data: labels.map((label) => scoreAverage(subjectMap.get(label).post)), backgroundColor: "#10b981" }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
     }
 
     function setSelectValueIfOption(select, value) {
@@ -1428,10 +1634,25 @@
     }
 
     function summarizeAttendanceRowsByClassWeek(rows) {
-      return summarizeByClass(rows)
+      const summaries = summarizeByClass(rows);
+      const firstActiveByClass = new Map();
+      summaries.forEach((row) => {
+        const hasActivity = (row.total || 0) > 0 || (row.sessions || 0) > 0 || (row.present || 0) > 0 || (row.permit || 0) > 0 || (row.sick || 0) > 0 || (row.absent || 0) > 0;
+        if (!hasActivity || !row.class) return;
+        const start = itemWeekStart(row);
+        if (!start) return;
+        const current = firstActiveByClass.get(row.class);
+        if (!current || start < current) firstActiveByClass.set(row.class, start);
+      });
+      return summaries
         .filter((row) => row.class && row.class !== "-")
+        .filter((row) => {
+          const firstActive = firstActiveByClass.get(row.class);
+          const start = itemWeekStart(row);
+          return !firstActive || !start || start >= firstActive;
+        })
         .map((row) => ({ ...row, aggregateClassWeek: true }))
-        .sort((a, b) => (a.periodOrder ?? 999) - (b.periodOrder ?? 999) || compareClass(a.class, b.class));
+        .sort((a, b) => itemWeekStart(a).localeCompare(itemWeekStart(b)) || (a.periodOrder ?? 999) - (b.periodOrder ?? 999) || compareClass(a.class, b.class));
     }
 
     function render() {
@@ -4789,6 +5010,10 @@
           console.warn("Refresh drill gagal, data drill sebelumnya tetap dipakai:", error);
         }
         fillDrillFilters();
+        prepostLoaded = false;
+        prepostRows = [];
+        prepostLoadPromise = null;
+        if (!$("prepostView").hidden) loadPrepostData();
         if (keepFilters) render();
         else resetFilters();
         scheduleDrillRender();
@@ -6017,21 +6242,14 @@
 
     function normalizeAttendancePeriods(source) {
       const sourceWeeks = Array.isArray(source?.weeks) ? source.weeks : [];
-      const crossMonthTargets = new Set();
-      sourceWeeks.forEach((week) => {
-        const endMonth = canonicalDrillMonth(monthNameFromIso(week.end));
-        if (endMonth && canonicalDrillMonth(week.month) !== endMonth) crossMonthTargets.add(endMonth);
-      });
       const labelsByKey = new Map();
-      crossMonthTargets.forEach((targetMonth) => {
-        sourceWeeks
-          .filter((week) => canonicalDrillMonth(monthNameFromIso(week.end)) === targetMonth)
-          .sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")))
-          .forEach((week, index) => labelsByKey.set(week.key, { month: targetMonth, week: `Week ${index + 1}` }));
-      });
       const periodByKey = new Map();
       const weeks = sourceWeeks.map((week) => {
-        const label = labelsByKey.get(week.key) || { month: canonicalDrillMonth(week.month), week: canonicalDrillWeek(week.week) };
+        const sourceMonth = canonicalDrillMonth(week.month);
+        const sourceStart = String(week.start || "");
+        const julyDate = sourceMonth === "Juli" && /^\d{4}-07-\d{2}$/.test(sourceStart) ? Number(sourceStart.slice(8, 10)) : 0;
+        const databaseLabel = sourceStart === "2026-07-27" ? { month: "Juli", week: "Week 5" } : julyDate >= 13 && julyDate <= 31 ? { month: "Juli", week: `Week ${Math.ceil(julyDate / 7) + 1}` } : null;
+        const label = labelsByKey.get(week.key) || databaseLabel || { month: sourceMonth, week: canonicalDrillWeek(week.week) };
         const key = `${label.month}|${label.week}|${week.start}`;
         const normalizedWeek = { ...week, month: label.month, week: label.week, key, label: `${label.month} - ${label.week}`, weekOrder: weekNumber(label.week) };
         periodByKey.set(week.key, normalizedWeek);
@@ -6121,18 +6339,6 @@
     }
 
     function normalizeAttendanceBlockLabels(blocks) {
-      const crossMonthTargets = new Set(blocks
-        .map((block) => canonicalDrillMonth(monthNameFromIso(block.dateColumns.at(-1)?.iso)))
-        .filter((month, index) => month && canonicalDrillMonth(blocks[index].sourceMonth) !== month));
-      crossMonthTargets.forEach((targetMonth) => {
-        blocks
-          .filter((block) => canonicalDrillMonth(monthNameFromIso(block.dateColumns.at(-1)?.iso)) === targetMonth)
-          .sort((a, b) => String(a.dateColumns[0]?.iso || "").localeCompare(String(b.dateColumns[0]?.iso || "")))
-          .forEach((block, index) => {
-            block.month = targetMonth;
-            block.week = `Week ${index + 1}`;
-          });
-      });
       blocks.forEach((block, index) => {
         block.month = canonicalDrillMonth(block.month);
         block.week = canonicalDrillWeek(block.week);

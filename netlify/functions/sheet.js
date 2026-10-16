@@ -2,8 +2,11 @@ exports.handler = async function handler(event) {
   const gid = event?.queryStringParameters?.gid || "0";
   const sheet = event?.queryStringParameters?.sheet || "";
   const range = event?.queryStringParameters?.range || "";
+  const source = event?.queryStringParameters?.source || "";
   const cachebust = event?.queryStringParameters?.cachebust || Date.now();
-  const base = "https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
+  const base = source === "prepost"
+    ? "https://docs.google.com/spreadsheets/d/1CexZSRdnsicD6iaczf7FGtjLAp9DE6o8G-Glnzxb8io"
+    : "https://docs.google.com/spreadsheets/d/1Ay9OPNDLYI0SKsZ4_98y2mqR_y3mVWOwBRhpN8hADJU";
   const url = sheet
     ? `${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}${range ? `&range=${encodeURIComponent(range)}` : ""}&cachebust=${encodeURIComponent(cachebust)}`
     : `${base}/export?format=csv&gid=${encodeURIComponent(gid)}&cachebust=${encodeURIComponent(cachebust)}`;
