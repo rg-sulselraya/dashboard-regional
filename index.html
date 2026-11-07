@@ -149,6 +149,13 @@
     .panel-head .table-tools input { min-width: 230px; }
     .panel-head .table-tools select, .chart-controls select { min-width: 210px; }
     .chartbox { height: 360px; padding: 18px 22px 12px; }
+    .tryout-chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px; }
+    .tryout-chart-card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; }
+    .tryout-chart-card h4 { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+    .tryout-chart-card canvas { display: block; width: 100%; height: 230px; }
+    .tryout-analysis { margin: 0; padding: 16px 28px 22px 42px; color: var(--ink); line-height: 1.6; }
+    .tryout-analysis li { margin: 6px 0; }
+    @media (max-width: 760px) { .tryout-chart-grid { grid-template-columns: 1fr; } }
     .chart-controls { display: flex; gap: 8px; align-items: center; }
     .chart-controls select { height: 34px; min-height: 34px; min-width: 118px; }
     .table-wrap { overflow: auto; max-height: 560px; }
@@ -660,9 +667,7 @@
           <div class="table-tools">
             <button id="downloadDrillPdfBtn" class="download-pdf" title="Unduh PDF Drill" aria-label="Unduh PDF Drill"><span>↓</span><span>PDF</span></button>
             <button id="downloadDrillImageBtn" class="download-image" title="Unduh gambar Drill" aria-label="Unduh gambar Drill"><span>↓</span><span>PNG</span></button>
-            <button id="shareDrillWhatsAppBtn" class="download-image" title="Kirim PNG melalui WhatsApp" aria-label="Kirim PNG melalui WhatsApp" hidden><span>↗</span><span>Kirim WA</span></button>
-            <button id="sharePreparedDrillBtn" class="download-image" title="Bagikan PNG yang sudah dibuat" aria-label="Bagikan PNG yang sudah dibuat" hidden disabled><span>↗</span><span>Bagikan PNG</span></button>
-            <span id="drillExportStatus" class="pill" role="status" aria-live="polite" hidden></span>
+            <button id="shareDrillWhatsAppBtn" class="download-image" title="Kirim laporan Drill melalui WhatsApp" aria-label="Kirim laporan Drill melalui WhatsApp" hidden><span>↗</span><span>Kirim WA</span></button>
             <span class="pill" id="drillDateCount">0 tanggal</span>
           </div>
         </div>
@@ -693,9 +698,28 @@
     </section>
 
     <section class="view" id="tryoutView" hidden>
-      <div class="panel placeholder">
-        <h2>Tryout Siswa</h2>
-        <p>Menu ini disiapkan untuk monitoring tryout siswa.</p>
+      <section class="filters" aria-label="Filter Tryout Siswa">
+        <label>Event<select id="tryoutEventSelect"><option value="">Semua event</option></select></label>
+        <label>Cabang<select id="tryoutBranchSelect"><option value="">Semua cabang</option></select></label>
+        <label>Status<select id="tryoutStatusSelect"><option value="">Semua status</option></select></label>
+        <label>Nama Siswa<input id="tryoutStudentSearch" type="search" list="tryoutStudentSuggestions" placeholder="Ketik nama siswa" autocomplete="off"><datalist id="tryoutStudentSuggestions"></datalist></label>
+      </section>
+      <div class="panel" id="tryoutDetailPanel" hidden>
+        <div class="panel-head"><h2 id="tryoutDetailTitle">Detail Tryout Siswa</h2></div>
+        <div class="table-wrap"><table><thead><tr><th>Event</th><th>PU</th><th>PPU</th><th>PBM</th><th>PK</th><th>LBI Saintek</th><th>LBI Soshum</th><th>LBE</th><th>PM</th><th>Rata-rata</th><th>Durasi</th><th>Keluar Tab</th></tr></thead><tbody id="tryoutDetailRows"></tbody></table></div>
+        <div class="panel-head"><h3>Perbandingan Nilai per Subtes</h3></div>
+        <div class="tryout-chart-grid">
+          <div class="tryout-chart-card"><h4>PU</h4><canvas id="tryoutChartPU"></canvas></div>
+          <div class="tryout-chart-card"><h4>PPU</h4><canvas id="tryoutChartPPU"></canvas></div>
+          <div class="tryout-chart-card"><h4>PBM</h4><canvas id="tryoutChartPBM"></canvas></div>
+          <div class="tryout-chart-card"><h4>PK</h4><canvas id="tryoutChartPK"></canvas></div>
+          <div class="tryout-chart-card"><h4>LBI Saintek</h4><canvas id="tryoutChartLBISaintek"></canvas></div>
+          <div class="tryout-chart-card"><h4>LBI Soshum</h4><canvas id="tryoutChartLBISoshum"></canvas></div>
+          <div class="tryout-chart-card"><h4>LBE</h4><canvas id="tryoutChartLBE"></canvas></div>
+          <div class="tryout-chart-card"><h4>PM</h4><canvas id="tryoutChartPM"></canvas></div>
+        </div>
+        <div class="panel-head"><h3>Hasil Analisis</h3></div>
+        <ul id="tryoutAnalysis" class="tryout-analysis"></ul>
       </div>
     </section>
 
@@ -736,6 +760,7 @@
     const FILTER_STATE_STORAGE_KEY = "sulselRayaFilterState";
     const REMOTE_BUNDLED_DATA_BASE_URL = "https://raw.githubusercontent.com/rg-sulselraya/dashboard-regional/main";
     const PREPOST_SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1CexZSRdnsicD6iaczf7FGtjLAp9DE6o8G-Glnzxb8io";
+    const TRYOUT_SHEET_BASE_URL = "https://docs.google.com/spreadsheets/d/1VdPxqaHyW1j0tcW-in9xid3SIGr8zMmUUg9dFKZvrdQ";
     const EXPECTED_ATTENDANCE_STATUSES = ["Hadir", "Izin", "Sakit", "Alpa"];
     const DASHBOARD_MIN_TODAY = localIsoDate(new Date());
     const DRILL_MENU_DATE = offsetIsoDate(DASHBOARD_MIN_TODAY, -1);
@@ -765,8 +790,9 @@
     let prepostLoaded = false;
     let prepostLoadPromise = null;
     let prepostSubjectChart = null;
-    let shareDrillImage = false;
-    let preparedDrillShareFile = null;
+    let tryoutRows = [];
+    let tryoutLoaded = false;
+    let tryoutLoadPromise = null;
       let drillMode = "student";
       let selectedDrillGrade = "12 SMA";
       let inactiveDrillStatusFilter = "";
@@ -789,8 +815,6 @@
     let weekNames = [];
     const statusColors = { Hadir: "#10B981", Izin: "#F58220", Sakit: "#7c5ce7", Alpa: "#ef4444" };
     const numberFmt = new Intl.NumberFormat("id-ID");
-    // Tahap simulasi: tidak membuka WhatsApp, popup, atau mengirim request eksternal.
-    const DRILL_WHATSAPP_MODE = "production";
     const percentLabelPlugin = {
       id: "percentLabelPlugin",
       afterDatasetsDraw(chart) {
@@ -900,11 +924,7 @@
       $("drillSummaryGrid").addEventListener("click", handleDrillSummaryClick);
       $("downloadDrillPdfBtn").addEventListener("click", downloadDrillPdf);
       $("downloadDrillImageBtn").addEventListener("click", downloadDrillImage);
-      $("shareDrillWhatsAppBtn").addEventListener("click", () => {
-        shareDrillImage = true;
-        downloadDrillImage();
-      });
-      $("sharePreparedDrillBtn").addEventListener("click", sharePreparedDrillPng);
+      $("shareDrillWhatsAppBtn").addEventListener("click", shareDrillWhatsApp);
       $("refreshBtn").addEventListener("click", refreshData);
       $("studentRows").addEventListener("change", handleAttendanceEditStatusChange);
       $("studentRows").addEventListener("submit", handleAttendanceEditSubmit);
@@ -946,6 +966,10 @@
         $(id).addEventListener("input", renderPrepost);
         $(id).addEventListener("change", renderPrepost);
       });
+      ["tryoutEventSelect", "tryoutBranchSelect", "tryoutStatusSelect", "tryoutStudentSearch"].forEach((id) => {
+        $(id).addEventListener("input", renderTryout);
+        $(id).addEventListener("change", renderTryout);
+      });
       $("branchSelect").addEventListener("change", () => { if (!$('prepostView').hidden) renderPrepost(); });
       updateDataSourceStatus("Memuat data live");
       await refreshData({ silent: true, keepFilters: true });
@@ -985,11 +1009,171 @@
         scheduleDrillRender();
       } else if (viewId === "prepostView") {
         loadPrepostData();
+      } else if (viewId === "tryoutView") {
+        loadTryoutData();
       } else {
         if (viewId === "attendanceView") syncDrillFiltersToAttendance();
         window.setTimeout(render, 0);
       }
       saveFilterState();
+    }
+
+    async function loadTryoutData() {
+      if (tryoutLoaded) return renderTryout();
+      if (!tryoutLoadPromise) {
+        tryoutLoadPromise = loadTryoutSheetRows().then((rows) => {
+          tryoutRows = buildTryoutRows(rows);
+          tryoutLoaded = true;
+          renderTryoutFilters();
+          renderTryout();
+        }).catch((error) => {
+          console.warn("Data Tryout gagal dimuat:", error);
+          $("tryoutDetailPanel").hidden = true;
+          tryoutLoadPromise = null;
+        });
+      }
+      return tryoutLoadPromise;
+    }
+
+    async function loadTryoutSheetRows() {
+      try {
+        const response = await fetch(`${TRYOUT_SHEET_BASE_URL}/export?format=csv&gid=0&cachebust=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return validateSheetRows(parseCsv(await response.text()));
+      } catch (error) {
+        console.warn("Ekspor CSV Tryout gagal, mencoba JSONP:", error);
+        return loadTryoutSheetFallback();
+      }
+    }
+
+    function loadTryoutSheetFallback() {
+      return new Promise((resolve, reject) => {
+        const callbackName = `tryoutSheet_${Date.now()}_${Math.random().toString(36).slice(2)}`.replace(/[^a-zA-Z0-9_$]/g, "_");
+        const script = document.createElement("script");
+        const timeout = window.setTimeout(() => { cleanup(); reject(new Error("Fallback Tryout timeout")); }, 20000);
+        function cleanup() { window.clearTimeout(timeout); script.remove(); delete window[callbackName]; }
+        window[callbackName] = (payload) => { cleanup(); if (!payload || payload.status !== "ok") reject(new Error(payload?.status || "Tryout tidak dapat dibaca")); else resolve(validateSheetRows(gvizToRowsWithHeaders(payload))); };
+        script.onerror = () => { cleanup(); reject(new Error("Fallback Tryout gagal")); };
+        script.src = `${TRYOUT_SHEET_BASE_URL}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&headers=1&gid=0&cachebust=${Date.now()}`;
+        document.body.appendChild(script);
+      });
+    }
+
+    function buildTryoutRows(rows) {
+      if (!Array.isArray(rows) || rows.length < 2) return [];
+      const headers = rows[0].map((value) => normalizeLookup(value));
+      const index = (name) => headers.indexOf(normalizeLookup(name));
+      const scoreNames = ["PU", "PPU", "PBM", "PK", "LBI Saintek", "LBI Soshum", "LBE", "PM"];
+      const scoreIndexes = scoreNames.map(index);
+      const numeric = (value) => { const n = Number(String(value ?? "").replace(/[% ]/g, "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
+      return rows.slice(1).map((row) => {
+        const scoreValues = scoreIndexes.map((i) => numeric(row[i]));
+        const scores = scoreValues.filter((value) => value !== null);
+        return { event: String(row[index("Nama Event")] || "-").trim(), email: String(row[index("Email")] || "").trim(), userId: String(row[index("User ID")] || "").trim(), name: String(row[index("Nama")] || "-").trim(), branch: String(row[index("Cabang")] || "-").trim(), school: String(row[index("Sekolah")] || "-").trim(), status: String(row[index("Status Pengerjaan")] || "-").trim(), duration: String(row[index("durasi pengerjaan")] || "-").trim(), tabDuration: String(row[index("durasi keluar tab")] || "-").trim(), scoreValues, total: scores.reduce((sum, value) => sum + value, 0), average: scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null };
+      }).filter((row) => row.name !== "-");
+    }
+
+    function renderTryoutFilters() {
+      const fill = (id, values, label) => { const current = $(id).value; $(id).innerHTML = `<option value="">${label}</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`; $(id).value = values.includes(current) ? current : ""; };
+      fill("tryoutEventSelect", [...new Set(tryoutRows.map((row) => row.event))].sort((a, b) => a.localeCompare(b, "id")), "Semua event");
+      fill("tryoutBranchSelect", [...new Set(tryoutRows.map((row) => row.branch))].sort((a, b) => a.localeCompare(b, "id")), "Semua cabang");
+      fill("tryoutStatusSelect", [...new Set(tryoutRows.map((row) => row.status))].sort((a, b) => a.localeCompare(b, "id")), "Semua status");
+      $("tryoutStudentSuggestions").innerHTML = [...new Set(tryoutRows.map((row) => row.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")).map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+    }
+
+    function renderTryout() {
+      if (!$('tryoutDetailPanel') || !tryoutLoaded) return;
+      renderTryoutFilters();
+      const event = $("tryoutEventSelect").value;
+      const branch = $("tryoutBranchSelect").value;
+      const status = $("tryoutStatusSelect").value;
+      const search = normalizeLookup($("tryoutStudentSearch").value);
+      const rows = tryoutRows.filter((row) => (!event || row.event === event) && (!branch || row.branch === branch) && (!status || row.status === status) && (!search || [row.name, row.email, row.userId].some((value) => normalizeLookup(value).includes(search))));
+      const matchingNames = [...new Set(rows.map((row) => normalizeLookup(row.name)))];
+      if (search && matchingNames.length === 1) {
+        const selectedStudent = rows.find((row) => normalizeLookup(row.name) === matchingNames[0]);
+        renderTryoutDetail(selectedStudent.userId || selectedStudent.name);
+      } else {
+        $("tryoutDetailPanel").hidden = true;
+      }
+    }
+
+    function renderTryoutDetail(studentKey) {
+      const selectedRow = tryoutRows.find((row) => (row.userId || row.name) === studentKey || row.name === studentKey);
+      const studentRows = selectedRow ? tryoutRows.filter((row) => row.name === selectedRow.name || (selectedRow.userId && row.userId === selectedRow.userId)).sort((a, b) => episodeNumber(a.event) - episodeNumber(b.event)) : [];
+      if (!studentRows.length) return;
+      const scoreFmt = (value) => value === null ? "-" : numberFmt.format(Math.round(value));
+      $("tryoutDetailTitle").textContent = `Detail Tryout: ${studentRows[0].name}`;
+      const subtestFmt = (value) => value === null ? "-" : numberFmt.format(Math.round(value));
+      $("tryoutDetailRows").innerHTML = studentRows.map((row) => `<tr><td>${escapeHtml(row.event)}</td>${row.scoreValues.map((value) => `<td>${subtestFmt(value)}</td>`).join("")}<td>${row.average === null ? "-" : row.average.toFixed(1)}</td><td>${escapeHtml(row.duration)}</td><td>${escapeHtml(row.tabDuration)}</td></tr>`).join("");
+      $("tryoutDetailPanel").hidden = false;
+      drawTryoutScoreFallback(studentRows);
+      const best = studentRows.reduce((a, b) => (a.average || 0) >= (b.average || 0) ? a : b);
+      const worst = studentRows.reduce((a, b) => (a.average || 0) <= (b.average || 0) ? a : b);
+      const completed = studentRows.filter((row) => normalizeLookup(row.status) === "completed").length;
+      const analysisSubtestNames = ["PU", "PPU", "PBM", "PK", "LBI Saintek", "LBI Soshum", "LBE", "PM"];
+      const subtestAverages = analysisSubtestNames.map((name, index) => {
+        const values = studentRows.map((row) => row.scoreValues[index]);
+        const validValues = values.filter((value) => value !== null);
+        return { name, values, value: validValues.length ? validValues.reduce((sum, score) => sum + score, 0) / validValues.length : null };
+      });
+      const describe = (item) => {
+        if (item.value === null) return `${item.name}: belum ada data nilai.`;
+        const values = item.values.filter((value) => value !== null).map((value) => scoreFmt(value)).join(" → ");
+        const first = item.values.find((value) => value !== null);
+        const last = [...item.values].reverse().find((value) => value !== null);
+        const trend = first !== undefined && last !== undefined ? (last > first ? `tren meningkat ${scoreFmt(last - first)} poin` : last < first ? `tren menurun ${scoreFmt(first - last)} poin` : "tren stabil") : "";
+        if (item.value >= 600) return `${item.name}: rata-rata ${scoreFmt(item.value)} — target 600 tercapai. Rangkaian nilai ${values}; ${trend}. Pertahankan capaian ini.`;
+        return `${item.name}: rata-rata ${scoreFmt(item.value)} — masih kurang ${scoreFmt(600 - item.value)} poin dari target 600. Rangkaian nilai ${values}; ${trend}. Perlu latihan terarah dan evaluasi kesalahan.`;
+      };
+      const good = subtestAverages.filter((item) => item.value !== null && item.value >= 600);
+      const improve = subtestAverages.filter((item) => item.value !== null && item.value < 600).sort((a, b) => a.value - b.value);
+      const priority = improve.slice(0, 3);
+      const analysisHtml = [
+        `<li><strong>Ringkasan:</strong> ${escapeHtml(studentRows[0].name)} mengikuti ${studentRows.length} event dan menyelesaikan ${completed} event dengan status COMPLETED.</li>`,
+        `<li><strong>Perbandingan event:</strong> performa terbaik pada ${escapeHtml(best.event)} (${scoreFmt(best.average)}), sedangkan terendah pada ${escapeHtml(worst.event)} (${scoreFmt(worst.average)}).</li>`,
+        `<li><strong>Yang sudah bagus:</strong> ${good.length ? good.map((item) => escapeHtml(describe(item))).join(" ") : "Belum ada subtes yang mencapai target 600."}</li>`,
+        ...improve.map((item) => `<li><strong>Yang perlu diperbaiki — ${escapeHtml(item.name)}:</strong> ${escapeHtml(describe(item).replace(`${item.name}: `, ""))}</li>`),
+        `<li><strong>Prioritas belajar:</strong> ${priority.length ? priority.map((item, index) => `${index + 1}. ${escapeHtml(item.name)} (rata-rata ${scoreFmt(item.value)}, kurang ${scoreFmt(600 - item.value)} poin)`).join("; ") : "Pertahankan semua subtes yang sudah mencapai target."}</li>`,
+        `<li><strong>Manajemen pengerjaan:</strong> durasi pengerjaan dan durasi keluar tab perlu dibandingkan antar-event. Pertahankan durasi yang efektif dan kurangi aktivitas keluar tab jika meningkat.</li>`
+      ];
+      $("tryoutAnalysis").innerHTML = analysisHtml.join("");
+      $("tryoutDetailPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function drawTryoutScoreFallback(rows) {
+      const names = ["PU", "PPU", "PBM", "PK", "LBI Saintek", "LBI Soshum", "LBE", "PM"];
+      names.forEach((name, scoreIndex) => drawTryoutSubtestChart(rows, name, scoreIndex));
+    }
+
+    function drawTryoutSubtestChart(rows, name, scoreIndex) {
+      const canvasId = `tryoutChart${name.replace(/[^A-Za-z]/g, "")}`;
+      const canvas = $(canvasId);
+      if (!canvas) return;
+      const width = Math.max(canvas.clientWidth || 900, 700);
+      const height = 230;
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      canvas.style.height = `${height}px`;
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const colors = ["#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#64748b"];
+      const left = 48, top = 26, right = 18, bottom = 42, chartWidth = width - left - right, chartHeight = height - top - bottom;
+      ctx.font = "12px Inter, sans-serif";
+      ctx.fillStyle = "#64748b";
+      [0, 200, 400, 600, 800].forEach((value) => { const y = top + chartHeight - (value / 800) * chartHeight; ctx.strokeStyle = "#d7e7f2"; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke(); ctx.fillText(String(value), 8, y + 4); });
+      const points = rows.map((row, index) => ({ row, x: rows.length === 1 ? left + chartWidth / 2 : left + (index * chartWidth) / (rows.length - 1), value: row.scoreValues[scoreIndex] }));
+      ctx.strokeStyle = colors[scoreIndex]; ctx.lineWidth = 3; ctx.beginPath();
+      points.forEach((point, index) => { if (point.value === null) return; const y = top + chartHeight - (point.value / 800) * chartHeight; if (index === 0 || !points[index - 1] || points[index - 1].value === null) ctx.moveTo(point.x, y); else ctx.lineTo(point.x, y); });
+      ctx.stroke();
+      points.forEach((point) => { if (point.value === null) return; const y = top + chartHeight - (point.value / 800) * chartHeight; ctx.fillStyle = colors[scoreIndex]; ctx.beginPath(); ctx.arc(point.x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#334155"; ctx.fillText(String(Math.round(point.value)), point.x - 12, Math.max(top + 12, y - 10)); ctx.save(); ctx.translate(point.x - 20, height - 12); ctx.rotate(-0.12); ctx.fillText(point.row.event.replace("Reguler ", ""), 0, 0); ctx.restore(); });
+    }
+
+    function episodeNumber(event) {
+      const match = String(event || "").match(/episode\s*(\d+)/i);
+      return match ? Number(match[1]) : 999;
     }
 
     async function loadPrepostData() {
@@ -2985,10 +3169,10 @@
         ...data.students.filter((student) => (!selectedBranch || student.branch === selectedBranch) && hasDrillTarget(student.class)).map((student) => student.class),
         ...drillData.filter((row) => (!selectedBranch || row.branch === selectedBranch) && hasDrillTarget(row.class)).map((row) => row.class)
       ].filter(Boolean))].sort(compareClass);
-      const months = [...new Set([
-        ...data.weeks.map((week) => canonicalDrillMonth(week.month)),
-        ...drillData.map((row) => canonicalDrillMonth(row.month))
-      ].filter(Boolean))].sort((a, b) => monthOrder(a) - monthOrder(b));
+      const months = [...new Set(drillData
+        .filter((row) => !selectedBranch || row.branch === selectedBranch)
+        .map((row) => canonicalDrillMonth(row.month)).filter(Boolean))]
+        .sort((a, b) => monthOrder(a) - monthOrder(b));
       const currentClass = $("drillClassSelect").value;
       $("drillClassSelect").disabled = !selectedBranch;
       $("drillClassSelect").innerHTML = `<option value="">Semua kelas</option>` + classes.map((kelas) => `<option value="${escapeHtml(kelas)}">${escapeHtml(kelas)}</option>`).join("");
@@ -2997,14 +3181,10 @@
       $("drillMonthSelect").innerHTML = `<option value="">Semua month</option>` + months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join("");
       $("drillMonthSelect").value = months.includes(currentMonth) ? currentMonth : "";
       const selectedMonth = $("drillMonthSelect").value;
-      const weeks = [...new Set([
-        ...data.weeks
-          .filter((week) => !selectedMonth || sameDrillMonth(week.month, selectedMonth))
-          .map((week) => canonicalDrillWeek(week.week)),
-        ...drillData
-          .filter((row) => !selectedMonth || sameDrillMonth(row.month, selectedMonth))
-          .map((row) => canonicalDrillWeek(row.week))
-      ].filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b));
+      const weeks = [...new Set(drillData
+        .filter((row) => (!selectedBranch || row.branch === selectedBranch) && (!selectedMonth || sameDrillMonth(row.month, selectedMonth)))
+        .map((row) => canonicalDrillWeek(row.week)).filter(Boolean))]
+        .sort((a, b) => weekNumber(a) - weekNumber(b));
       $("drillWeekSelect").innerHTML = `<option value="">Semua week</option>` + weeks.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
       $("drillWeekSelect").value = weeks.includes(currentWeek) ? currentWeek : "";
       updateDrillStudentOptions();
@@ -3173,10 +3353,12 @@
       if (!selectedStudent && selectedClass && isAllDrillPeriodSelected()) {
         dates = classTargetDateRange(selectedClass);
       }
+      if (!dates.length && rows.length) {
+        dates = [...new Set(rows.map((row) => row.date).filter(Boolean))].sort();
+      }
       const isAllClassDrill = !selectedStudent && !selectedClass;
-      const hasStudentFilter = Boolean(selectedStudent);
-      $("shareDrillWhatsAppBtn").hidden = !hasStudentFilter;
       const hasClassFilter = Boolean(selectedClass);
+      const hasStudentFilter = Boolean(selectedStudent);
       currentDrillDates = dates;
       if (selectedDrillDate && !dates.includes(selectedDrillDate)) selectedDrillDate = "";
       if (hasClassFilter && !hasStudentFilter) selectedDrillDate = "";
@@ -3204,8 +3386,10 @@
     function renderDrillDetail(rows, selectedClass = "", selectedStudent = "", aggregateDates = null) {
       const dates = selectedDrillDate ? [selectedDrillDate] : aggregateDates?.length ? aggregateDates : [];
       const insightDates = aggregateDates?.length ? aggregateDates : dates;
+      $("shareDrillWhatsAppBtn").hidden = !selectedStudent || !insightDates.length;
       const shouldShowStudentRows = Boolean(selectedClass) && !selectedStudent;
       if (!selectedClass && !selectedStudent) {
+        $("shareDrillWhatsAppBtn").hidden = true;
         renderInactiveDrillDetail(rows, dates);
         return;
       }
@@ -5808,64 +5992,10 @@
       return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     }
 
-    function canShareDrillFile(shareApi, canShareApi, file) {
-      return Boolean(typeof shareApi === "function" && typeof canShareApi === "function" && canShareApi({ files: [file] }));
-    }
-
-    function drillShareErrorStatus(error) {
-      if (error?.name === "AbortError") return "Dialog berbagi dibatalkan.";
-      if (error?.name === "NotAllowedError") return "Berbagi ditolak browser; gunakan tombol Bagikan setelah PNG selesai dibuat.";
-      return "Gagal membuka dialog berbagi.";
-    }
-
-    function clearPreparedDrillShare() {
-      preparedDrillShareFile = null;
-      const button = $("sharePreparedDrillBtn");
-      if (button) {
-        button.hidden = true;
-        button.disabled = true;
-      }
-    }
-
-    function sharePreparedDrillPng() {
-      const file = preparedDrillShareFile;
-      const button = $("sharePreparedDrillBtn");
-      if (!file || button?.disabled) return;
-      if (DRILL_WHATSAPP_MODE === "simulation") {
-        setDrillExportStatus("Simulasi: PNG siap dibagikan; Web Share tidak dijalankan.", "success");
-        return;
-      }
-      if (typeof File === "undefined" || typeof navigator.share !== "function") {
-        button.disabled = true;
-        openWhatsAppDownloadFallback(file, file.name, "Berbagi file tidak didukung; PNG diunduh untuk lampiran manual.");
-        button.disabled = false;
-        return;
-      }
-      if (!canShareDrillFile(navigator.share, navigator.canShare, file)) {
-        button.disabled = true;
-        openWhatsAppDownloadFallback(file, file.name, "Berbagi file tidak didukung; PNG diunduh untuk lampiran manual.");
-        button.disabled = false;
-        return;
-      }
-      button.disabled = true;
-      setDrillExportStatus("Membuka dialog berbagi…", "loading");
-      // Intentionally no asynchronous work before this user-initiated call.
-      navigator.share({ title: "Rekap Drill Siswa", text: "Rekap Drill Siswa", files: [file] }).then(() => {
-        button.disabled = false;
-        setDrillExportStatus("Dialog berbagi dibuka; periksa sebelum mengirim.", "success");
-      }).catch((error) => {
-        button.disabled = false;
-        setDrillExportStatus(drillShareErrorStatus(error), "error");
-      });
-    }
-
     async function downloadDrillImage() {
       const imageButton = $("downloadDrillImageBtn");
-      const shareButton = $("shareDrillWhatsAppBtn");
-      if (imageButton?.disabled || shareButton?.disabled) return;
-      clearPreparedDrillShare();
+      if (imageButton?.disabled) return;
       if (imageButton) imageButton.disabled = true;
-      if (shareButton) shareButton.disabled = true;
       setDrillExportStatus("Membuat PNG…", "loading");
       const selectedStudent = drillMode === "student" ? $("drillStudentInput").value.trim().toLowerCase() : "";
       const selectedStudentRecord = findSelectedDrillStudent(selectedStudent);
@@ -5876,9 +6006,7 @@
       const activeDates = currentDrillDates.length ? currentDrillDates : [date].filter(Boolean);
       const selectedPeriodDates = drillPeriodDateSet(selectedMonth, selectedWeek);
       if (!activeDates.length) {
-        shareDrillImage = false;
         if (imageButton) imageButton.disabled = false;
-        if (shareButton) shareButton.disabled = false;
         setDrillExportStatus("Gagal: tidak ada tanggal drill.", "error");
         alert("Tidak ada tanggal drill sesuai filter saat ini.");
         return;
@@ -5892,9 +6020,7 @@
       });
       const displayRows = drillDisplayRows(rows, selectedClass, activeDates[0] || date, selectedStudent, activeDates);
       if (!displayRows.length) {
-        shareDrillImage = false;
         if (imageButton) imageButton.disabled = false;
-        if (shareButton) shareButton.disabled = false;
         setDrillExportStatus("Gagal: tidak ada data siswa.", "error");
         alert("Tidak ada data siswa untuk filter drill saat ini.");
         return;
@@ -6076,9 +6202,7 @@
 
       canvas.toBlob((blob) => {
         if (!blob) {
-          shareDrillImage = false;
           imageButton.disabled = false;
-          shareButton.disabled = false;
           setDrillExportStatus("Gagal membuat PNG: hasil kosong.", "error");
           alert("Gambar gagal dibuat.");
           return;
@@ -6088,28 +6212,9 @@
           const exportInfo = validateDrillPngExport(blob, fileName, canvas.width, canvas.height);
           setDrillExportStatus(`PNG berhasil dibuat · ${formatFileSize(exportInfo.size)}`, "success");
         } catch (error) {
-          shareDrillImage = false;
           imageButton.disabled = false;
-          shareButton.disabled = false;
           setDrillExportStatus(`Gagal membuat PNG: ${error.message}`, "error");
           alert(`Gambar gagal dibuat: ${error.message}`);
-          return;
-        }
-        if (shareDrillImage) {
-          shareDrillImage = false;
-          const file = new File([blob], fileName, { type: "image/png" });
-          preparedDrillShareFile = file;
-          const preparedButton = $("sharePreparedDrillBtn");
-          preparedButton.hidden = false;
-          preparedButton.disabled = false;
-          imageButton.disabled = false;
-          shareButton.disabled = false;
-          setDrillExportStatus(
-            DRILL_WHATSAPP_MODE === "simulation"
-              ? `Simulasi selesai · PNG siap (${formatFileSize(blob.size)})`
-              : `PNG siap dibagikan · ${formatFileSize(blob.size)}`,
-            "success"
-          );
           return;
         }
         const link = document.createElement("a");
@@ -6123,23 +6228,7 @@
           link.remove();
         }, 1000);
         imageButton.disabled = false;
-        shareButton.disabled = false;
       }, "image/png");
-    }
-
-    function openWhatsAppDownloadFallback(blob, fileName, statusMessage = "PNG diunduh; silakan lampirkan secara manual ke grup WhatsApp.") {
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = fileName;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      window.setTimeout(() => {
-        URL.revokeObjectURL(objectUrl);
-        link.remove();
-      }, 1000);
-      setDrillExportStatus(statusMessage, "success");
     }
 
     function loadExportImage(source) {
@@ -6149,6 +6238,77 @@
         image.onerror = () => reject(new Error(`Gagal memuat ${source}`));
         image.src = source;
       });
+    }
+
+    function shareDrillWhatsApp() {
+      const studentName = $("drillStudentInput").value.trim();
+      if (!studentName) return;
+      const student = findSelectedDrillStudent(studentName.toLowerCase());
+      const selectedMonth = $("drillMonthSelect").value;
+      const selectedWeek = $("drillWeekSelect").value;
+      const weekDates = selectedWeek ? drillWeekRange(selectedMonth, selectedWeek) : [];
+      const isRunningWeek = Boolean(selectedWeek && weekDates.includes(DASHBOARD_MIN_TODAY));
+      const shareWeekDates = isRunningWeek ? weekDates.filter((date) => date < DASHBOARD_MIN_TODAY) : weekDates;
+      const dates = isRunningWeek ? shareWeekDates : selectedDrillDate ? [selectedDrillDate] : shareWeekDates.length ? shareWeekDates : currentDrillDates.slice();
+      if (!dates.length) return;
+      const studentRows = drillData.filter((row) => String(row.student || "").trim().toLowerCase() === studentName.toLowerCase() && dates.includes(row.date));
+      const selectedClass = $("drillClassSelect").value || student?.class || "";
+      const week = selectedWeek || "semua week";
+      const month = selectedMonth || "semua bulan";
+      const targetDates = weekDates.length ? weekDates : dates;
+      const dailyTargets = targetDates.map((date) => drillExpectedTargetForDate(selectedClass, studentName.toLowerCase(), student, date));
+      const weeklyTarget = dailyTargets.reduce((sum, target) => sum + (Number(target) || 0), 0);
+      const weeklyTotal = studentRows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+      const weeklyCorrect = studentRows.reduce((sum, row) => sum + (Number(row.correct) || 0), 0);
+      const weeklyPercent = weeklyTarget ? Math.round((weeklyCorrect / weeklyTarget) * 100) : 0;
+      const reportPeriodDates = weekDates.length ? weekDates : dates;
+      const deadline = reportPeriodDates.length ? reportPeriodDates[reportPeriodDates.length - 1] : "";
+      const shortPeriodDate = (date) => date ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T00:00:00`)) : "";
+      const periodStart = shortPeriodDate(reportPeriodDates[0]);
+      const periodEnd = shortPeriodDate(reportPeriodDates[reportPeriodDates.length - 1]);
+      const periodLabel = periodStart && periodEnd ? `${periodStart} - ${periodEnd}` : `${week} (${month})`;
+      const remaining = Math.max(0, weeklyTarget - weeklyCorrect);
+      const deadlineLabel = deadline ? safeFormatLongDate(deadline) : "Minggu sesuai week";
+      const dailyTargetLabel = dailyTargets.length ? dailyTargets[0] : 0;
+      const reachedTarget = weeklyTarget > 0 && weeklyCorrect >= weeklyTarget;
+      const lines = [
+        `*Laporan Progres Drill Soal ${studentName}*`,
+        `Periode: *${periodLabel}*`,
+        `Target Drill: *${dailyTargetLabel} soal benar / hari*`,
+        "",
+        reachedTarget
+          ? `Selamat, Ananda sudah berhasil mencapai target minggu ini dengan menyelesaikan *${weeklyCorrect}* dari ${weeklyTarget} soal benar dengan capaian *${weeklyPercent}%*.`
+          : `Ananda telah menyelesaikan *${weeklyCorrect} soal benar* dari target *${weeklyTarget} soal benar* pada minggu ini dengan capaian *${weeklyPercent}%*. Masih terdapat *${remaining} soal benar* yang perlu diselesaikan.`,
+        ""
+      ];
+      dates.forEach((date) => {
+        const rows = studentRows.filter((row) => row.date === date);
+        const target = dailyTargets[targetDates.indexOf(date)] || 0;
+        const total = rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+        const correct = rows.reduce((sum, row) => sum + (Number(row.correct) || 0), 0);
+        const percentCorrect = total ? Math.round((correct / total) * 100) : 0;
+        const achievement = target ? Math.round((correct / target) * 100) : 0;
+        lines.push(
+          `*${safeFormatLongDate(date)}*`,
+          `Jumlah Drill: ${total}`,
+          `Jumlah Benar: ${correct} (${percentCorrect}%)`,
+          `% Achievement: *${achievement}%*`,
+          ""
+        );
+      });
+      if (reachedTarget) {
+        lines.push(
+          "",
+          "Semoga pencapaian ini menjadi motivasi untuk terus berkembang.",
+          "*Jangan cepat puas, ya. Tetap semangat dan usahakan mengerjakan drill setiap hari agar konsistensinya tetap terjaga dan target minggu berikutnya bisa kembali tercapai.*",
+          "Mohon dukungan Bapak/Ibu untuk terus mengingatkan dan mendampingi Ananda dalam menjaga kebiasaan baik ini.",
+          "Terima kasih atas dukungan Bapak/Ibu."
+        );
+      } else {
+        lines.push("", `Diharapkan Ananda dapat segera melanjutkan pengerjaan drill dan memenuhi target tersebut paling lambat hari *${deadlineLabel} pukul 23.59 WITA*. Kami mohon bantuan Bapak/Ibu untuk turut mengawasi dan memastikan target tersebut dapat diselesaikan tepat waktu.`);
+      }
+      const text = lines.join("\n").trim();
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
     }
 
     function buildDrillImageInsight(student, dates, rows, displayRow) {
