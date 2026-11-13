@@ -17,6 +17,7 @@ assert.deepEqual(
 );
 
 assert.equal(source.includes("shareDrillWhatsAppBtn"), true, "tombol Kirim WA harus tersedia");
+assert.equal(source.includes('if (viewId === "drillView") {\n        syncAttendanceFiltersToDrill();\n        loadDrillData(true);'), true, "menu Drill harus memuat data live saat dibuka");
 assert.equal(source.includes("function shareDrillWhatsApp()"), true, "handler Kirim WA harus tersedia");
 assert.equal(source.includes("const isRunningWeek = Boolean(selectedWeek && weekDates.includes(DASHBOARD_MIN_TODAY))"), true, "week berjalan harus terdeteksi");
 assert.equal(source.includes("weekDates.filter((date) => date < DASHBOARD_MIN_TODAY)"), true, "week berjalan harus dibatasi sampai H-1");
