@@ -4740,15 +4740,15 @@
       // A selected period can start today (for example, October Week 1 on 5 October).
       // Keep the daily follow-up panel on yesterday's cutoff, but let explicit
       // month/week filters show today's available Drill data and target students.
-      if (week) return drillWeekRange(month, week).filter((date) => date <= DASHBOARD_MIN_TODAY);
+      if (week) return drillWeekRange(month, week).filter((date) => date <= DRILL_MENU_DATE);
       if (month) {
         const periods = data.weeks
           .filter((item) => sameDrillMonth(item.month, month))
           .sort(comparePeriod);
         const dates = periods.flatMap((period) => drillWeekRange(period.month, period.week));
-        return [...new Set(dates)].filter((date) => date <= DASHBOARD_MIN_TODAY).sort();
+        return [...new Set(dates)].filter((date) => date <= DRILL_MENU_DATE).sort();
       }
-      return [...new Set(rows.map((row) => row.date))].filter((date) => date <= DASHBOARD_MIN_TODAY).sort();
+      return [...new Set(rows.map((row) => row.date))].filter((date) => date <= DRILL_MENU_DATE).sort();
     }
 
     function drillWeekRange(month, week) {
