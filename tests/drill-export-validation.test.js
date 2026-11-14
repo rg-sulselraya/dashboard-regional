@@ -19,6 +19,7 @@ assert.deepEqual(
 assert.equal(source.includes("shareDrillWhatsAppBtn"), true, "tombol Kirim WA harus tersedia");
 assert.equal(source.includes("const LIVE_DRILL_SCHEMA_VERSION = 11"), true, "cache Drill lama harus diinvalidasi saat data diperbarui");
 assert.equal(source.includes("drillWeekRange(month, week).filter((date) => date <= DRILL_MENU_DATE)"), true, "tampilan Drill harus berhenti sampai H-1");
+assert.equal(source.includes("const slashMatch = text.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/)"), true, "tanggal Google Sheets harus diparse eksplisit");
 assert.equal(source.includes('if (viewId === "drillView") {\n        syncAttendanceFiltersToDrill();\n        loadDrillData(true);'), true, "menu Drill harus memuat data live saat dibuka");
 assert.equal(source.includes("function shareDrillWhatsApp()"), true, "handler Kirim WA harus tersedia");
 assert.equal(source.includes("const isRunningWeek = Boolean(selectedWeek && weekDates.includes(DASHBOARD_MIN_TODAY))"), true, "week berjalan harus terdeteksi");

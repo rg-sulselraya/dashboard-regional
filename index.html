@@ -5058,6 +5058,8 @@
       if (idMatch) return `${idMatch[3]}-${monthMap[idMatch[2].toLowerCase()] || "01"}-${String(Number(idMatch[1])).padStart(2, "0")}`;
       const enMatch = text.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})/);
       if (enMatch) return `${enMatch[3]}-${monthMap[enMatch[1].toLowerCase()] || "01"}-${String(Number(enMatch[2])).padStart(2, "0")}`;
+      const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (slashMatch) return `${slashMatch[3]}-${String(Number(slashMatch[1])).padStart(2, "0")}-${String(Number(slashMatch[2])).padStart(2, "0")}`;
       const native = new Date(text);
       if (!Number.isNaN(native.getTime())) return native.toISOString().slice(0, 10);
       return text;
