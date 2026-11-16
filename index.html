@@ -6818,8 +6818,11 @@
       blocks.forEach((block, index) => {
         block.month = canonicalDrillMonth(block.month);
         block.week = canonicalDrillWeek(block.week);
-        block.order = index;
         block.weekOrder = weekNumber(block.week);
+      });
+      blocks.sort((a, b) => String(a.dateColumns?.[0]?.iso || "").localeCompare(String(b.dateColumns?.[0]?.iso || "")));
+      blocks.forEach((block, index) => {
+        block.order = index;
       });
     }
 
@@ -6911,7 +6914,7 @@
       const emailIndex = indexOf(["email"]);
       const nameIndex = indexOf(["nama siswa", "student"]);
       const serialIndex = indexOf(["user serial", "serial", "user"]);
-      const branchIndex = indexOf(["cabang"]);
+      const branchIndex = indexOf(["cabang", "branch", "area"]);
       const statusIndex = indexOf(["status"]);
       const schoolIndex = (() => { const i = indexOf(["nama sekolah", "asal sekolah", "sekolah", "school"]); return i >= 0 ? i : 8; })();
       const lookup = new Map();
@@ -6921,7 +6924,9 @@
         const branch = String(row[branchIndex] || "").trim();
         if (!branch) return;
         if (/isi nama siswa|tanggal paid/i.test(branch)) return;
-        const isActive = String(row[statusIndex] || "").trim().toLowerCase() === "active";
+        const normalizedStatus = String(row[statusIndex] || "").trim().toLowerCase();
+        const isActive = ["active", "aktif", "1", "true", "yes"].includes(normalizedStatus);
+        if (!(branch in lookup.branchTotals)) lookup.branchTotals[branch] = 0;
         if (isActive) lookup.branchTotals[branch] = (lookup.branchTotals[branch] || 0) + 1;
         const email = normalizeLookup(row[emailIndex]);
         const name = normalizeLookup(row[nameIndex]);
