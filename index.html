@@ -3316,10 +3316,15 @@
         renderDrill();
         return;
       }
-      const button = event.target.closest("[data-drill-student]");
-      if (!button) return;
-      const student = button.dataset.drillStudent || "";
-      const studentClass = button.dataset.drillClass || "";
+      const studentButton = event.target.closest("[data-drill-student]");
+      if (studentButton) {
+        selectDrillStudentFromButton(studentButton);
+      }
+    }
+
+    function selectDrillStudentFromButton(button) {
+      const student = button?.dataset.drillStudent || "";
+      const studentClass = button?.dataset.drillClass || "";
       if (!student) return;
       setSelectValueIfOption($("drillClassSelect"), studentClass);
       updateDrillStudentOptions();
@@ -3518,6 +3523,11 @@
       }
       renderStudentDrillInsight({ selectedClass, selectedStudent, selectedStudentRecord, dates: insightDates, selectedRows: summaryRows, displayRows: summaryDisplayRows, target, correct, total });
       $("drillRowsWrap").hidden = !shouldShowStudentRows;
+      $("drillRowsTitle").textContent = isStudentDetail
+        ? "Detail Drill Siswa"
+        : selectedClass
+          ? "Rekap Status Drill per Siswa"
+          : "Rekap Drill per Kelas";
       renderDrillRows(displayRows, selectedRows);
       drillRenderSignature = signature;
     }
@@ -4092,7 +4102,7 @@
         const headers = ["Nama", "Kelas", "Target", "Total", "%Ach", "Hari Aktif", "Hari Kosong", "Status", "Alasan"];
         $("drillRowsHead").innerHTML = `<tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>`;
         $("drillRows").innerHTML = displayRows.length ? displayRows.map((row) => `<tr>
-          <td class="name"><button type="button" class="drill-student-link" data-drill-student="${escapeHtml(row.student)}" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.student)}</button></td>
+          <td class="name"><button type="button" class="drill-student-link" onclick="event.stopPropagation(); selectDrillStudentFromButton(this)" data-drill-student="${escapeHtml(row.student)}" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.student)}</button></td>
           <td>${escapeHtml(row.class)}</td>
           <td class="metric metric-target">${numberFmt.format(row.target)}</td>
           <td class="metric metric-total">${numberFmt.format(row.total)}</td>
@@ -4142,7 +4152,7 @@
           <td class="metric metric-total">${numberFmt.format(row.total)}</td>
           <td class="metric metric-percent">${row.target ? Math.round((row.correct / row.target) * 100) : 0}%</td>
         </tr>` : `<tr>
-          <td class="name"><button type="button" class="drill-student-link" data-drill-student="${escapeHtml(row.student)}" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.student)}</button></td>
+          <td class="name"><button type="button" class="drill-student-link" onclick="event.stopPropagation(); selectDrillStudentFromButton(this)" data-drill-student="${escapeHtml(row.student)}" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.student)}</button></td>
           <td>${escapeHtml(row.class)}</td>
           <td class="metric metric-target">${numberFmt.format(row.target)}</td>
           <td class="metric metric-correct">${numberFmt.format(row.correct)}</td>
