@@ -3581,8 +3581,10 @@
 
     function renderAllClassDrillSummary(rows, dates) {
       const selectedBranch = $("branchSelect").value;
+      const selectedGrade = selectedDrillGrade || "ALL GRADE";
       const classes = [...new Set(data.students
         .filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch))
+        .filter((student) => selectedGrade === "ALL GRADE" || gradeFromClass(student.class) === selectedGrade)
         .map((student) => student.class)
         .filter(Boolean))].sort(compareClass);
       const classRows = classes.map((kelas) => {
