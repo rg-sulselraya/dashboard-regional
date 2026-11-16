@@ -1491,7 +1491,11 @@
         drillRecordByClassName.set(drillStudentRecordKey("", student.class, student.name), student);
       });
       classes = [...new Set(data.students.map((student) => student.class).filter(Boolean))].sort(compareClass);
-      branches = [...new Set(data.students.map((student) => student.branch).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
+      branches = [...new Set([
+        ...data.students.map((student) => student.branch),
+        ...drillData.map((row) => row.branch),
+        ...Object.keys(data.branchTotals || {})
+      ].filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
       months = [...new Set(data.weeks.map((week) => week.month).filter(Boolean))];
       weekNames = [...new Set(data.weeks.map((week) => week.week).filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b));
     }
@@ -3423,6 +3427,8 @@
       const isAllClassDrill = !selectedStudent && !selectedClass;
       const hasClassFilter = Boolean(selectedClass);
       const hasStudentFilter = Boolean(selectedStudent);
+      $("drillGradeTabs").hidden = hasClassFilter;
+      $("drillLeaderboardPanel").hidden = hasClassFilter;
       currentDrillDates = dates;
       if (selectedDrillDate && !dates.includes(selectedDrillDate)) selectedDrillDate = "";
       if (hasClassFilter && !hasStudentFilter) selectedDrillDate = "";
@@ -3431,7 +3437,7 @@
       $("drillDateGrid").innerHTML = hasStudentFilter && dates.length
         ? dates.map((date) => renderDrillDateRow(date, rows) + renderStudentSubjectDetail(date, rows)).join("")
         : "";
-      if (!selectedStudent && (!selectedClass || selectedBranch)) {
+      if (!selectedStudent && !selectedClass) {
         renderDrillLeaderboard(rows, dates);
       } else if (selectedStudent || selectedClass) {
         $("drillLeaderboardPanel").hidden = true;
