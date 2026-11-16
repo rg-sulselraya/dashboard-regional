@@ -25,7 +25,7 @@ assert.equal(source.includes("function shareDrillWhatsApp()"), true, "handler Ki
 assert.equal(source.includes("const isRunningWeek = Boolean(selectedWeek && weekDates.includes(DASHBOARD_MIN_TODAY))"), true, "week berjalan harus terdeteksi");
 assert.equal(source.includes("weekDates.filter((date) => date < DASHBOARD_MIN_TODAY)"), true, "week berjalan harus dibatasi sampai H-1");
 assert.equal(source.includes("const targetDates = weekDates.length ? weekDates : dates"), true, "target mingguan harus memakai rentang week penuh");
-assert.equal(source.includes("*Laporan Progres Drill Soal ${studentName}*"), true, "format laporan progres Drill harus tersedia");
+assert.equal(source.includes("*Laporan Progres Drill Soal"), true, "format laporan progres Drill harus tersedia");
 assert.equal(source.includes("*${weeklyCorrect} soal benar*"), true, "ringkasan harus memakai jumlah soal benar");
 assert.equal(source.includes("telah menyelesaikan *${weeklyCorrect} soal benar*"), true, "ringkasan pencapaian week harus tersedia");
 assert.equal(source.includes("Ananda telah menyelesaikan *${weeklyCorrect} soal benar*"), true, "narasi harus menggunakan sapaan Ananda");
@@ -34,6 +34,10 @@ assert.equal(source.includes("const dailyTargets = targetDates.map"), true, "tar
 assert.equal(source.includes("const weeklyTarget = dailyTargets.reduce"), true, "target mingguan harus merupakan total target harian");
 assert.equal(source.includes("Target Drill: *${dailyTargetLabel} soal benar / hari*"), true, "target drill harian harus menampilkan target soal benar");
 assert.equal(source.includes("const reachedTarget = weeklyTarget > 0 && weeklyCorrect >= weeklyTarget"), true, "narasi pencapaian harus memiliki kondisi target tercapai");
+assert.equal(source.includes("const isPastWeek = Boolean(selectedWeek && weekDates.length && !isRunningWeek"), true, "week lampau harus memiliki kondisi narasi khusus");
+assert.equal(source.includes("pada periode tersebut dengan capaian *${weeklyPercent}%*"), true, "narasi week lampau harus tersedia");
+assert.equal(source.includes('isPastWeek ? "*Laporan Hasil Drill Soal" : "*Laporan Progres Drill Soal"'), true, "judul week lampau harus menggunakan Laporan Hasil");
+assert.equal(source.includes("Kami berharap pada minggu berikutnya Ananda dapat lebih konsisten"), true, "saran week berikutnya harus tersedia");
 assert.equal(source.includes("Selamat, Ananda sudah berhasil mencapai target minggu ini"), true, "narasi target tercapai harus tersedia");
 assert.equal(source.includes("menyelesaikan *${weeklyCorrect}* dari ${weeklyTarget} soal benar dengan capaian *${weeklyPercent}%*"), true, "capaian target harus menebalkan angka progres");
 assert.equal(source.includes("capaian *${weeklyPercent}%*.`"), true, "narasi pencapaian tidak memakai emoji tambahan");

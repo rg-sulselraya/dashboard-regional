@@ -6273,14 +6273,17 @@
       const deadlineLabel = deadline ? safeFormatLongDate(deadline) : "Minggu sesuai week";
       const dailyTargetLabel = dailyTargets.length ? dailyTargets[0] : 0;
       const reachedTarget = weeklyTarget > 0 && weeklyCorrect >= weeklyTarget;
+      const isPastWeek = Boolean(selectedWeek && weekDates.length && !isRunningWeek && weekDates[weekDates.length - 1] < DASHBOARD_MIN_TODAY);
       const lines = [
-        `*Laporan Progres Drill Soal ${studentName}*`,
+        `${isPastWeek ? "*Laporan Hasil Drill Soal" : "*Laporan Progres Drill Soal"} ${studentName}*`,
         `Periode: *${periodLabel}*`,
         `Target Drill: *${dailyTargetLabel} soal benar / hari*`,
         "",
         reachedTarget
           ? `Selamat, Ananda sudah berhasil mencapai target minggu ini dengan menyelesaikan *${weeklyCorrect}* dari ${weeklyTarget} soal benar dengan capaian *${weeklyPercent}%*.`
-          : `Ananda telah menyelesaikan *${weeklyCorrect} soal benar* dari target *${weeklyTarget} soal benar* pada minggu ini dengan capaian *${weeklyPercent}%*. Masih terdapat *${remaining} soal benar* yang perlu diselesaikan.`,
+          : isPastWeek
+            ? `Ananda telah menyelesaikan *${weeklyCorrect} dari target ${weeklyTarget} soal benar* pada periode tersebut dengan capaian *${weeklyPercent}%*. Masih terdapat *${remaining} soal benar* yang belum tercapai.`
+            : `Ananda telah menyelesaikan *${weeklyCorrect} soal benar* dari target *${weeklyTarget} soal benar* pada minggu ini dengan capaian *${weeklyPercent}%*. Masih terdapat *${remaining} soal benar* yang perlu diselesaikan.`,
         ""
       ];
       dates.forEach((date) => {
@@ -6305,6 +6308,12 @@
           "*Jangan cepat puas, ya. Tetap semangat dan usahakan mengerjakan drill setiap hari agar konsistensinya tetap terjaga dan target minggu berikutnya bisa kembali tercapai.*",
           "Mohon dukungan Bapak/Ibu untuk terus mengingatkan dan mendampingi Ananda dalam menjaga kebiasaan baik ini.",
           "Terima kasih atas dukungan Bapak/Ibu."
+        );
+      } else if (isPastWeek) {
+        lines.push(
+          "",
+          "Kami berharap pada minggu berikutnya Ananda dapat lebih konsisten dalam mengerjakan drill setiap hari agar target mingguan dapat tercapai dengan lebih baik.",
+          "Mohon dukungan Bapak/Ibu untuk terus mengingatkan dan mendampingi Ananda dalam menjaga konsistensi belajarnya."
         );
       } else {
         lines.push("", `Diharapkan Ananda dapat segera melanjutkan pengerjaan drill dan memenuhi target tersebut paling lambat hari *${deadlineLabel} pukul 23.59 WITA*. Kami mohon bantuan Bapak/Ibu untuk turut mengawasi dan memastikan target tersebut dapat diselesaikan tepat waktu.`);
