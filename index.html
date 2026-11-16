@@ -1529,7 +1529,10 @@
     function updateWeekOptions() {
       const selectedMonth = $("monthSelect").value;
       const weeks = selectedMonth
-        ? [...new Set(data.weeks.filter((week) => week.month === selectedMonth).map((week) => week.week).filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b))
+        ? [...new Set(data.weeks
+          .filter((week) => week.month === selectedMonth && (!week.start || week.start <= DASHBOARD_MIN_TODAY))
+          .map((week) => week.week)
+          .filter(Boolean))].sort((a, b) => weekNumber(a) - weekNumber(b))
         : [];
       $("weekFilterLabel").hidden = !selectedMonth;
       $("weekSelect").innerHTML = `<option value="">Semua week</option>` + weeks.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`).join("");
@@ -1979,7 +1982,11 @@
       const statusLevel = attendancePercent >= 90 ? "good" : attendancePercent >= 75 ? "warn" : "bad";
       const statusText = statusLevel === "good" ? "Aman" : statusLevel === "warn" ? "Perlu Perhatian" : "Kritis";
       const studentCount = new Set(rows.map((row) => row.studentId || row.student)).size;
-      const classWeekRows = filteredWeekRows(filters, false);
+      const classWeekRows = filteredWeekRows(filters, false)
+        .filter((row) => {
+          const start = itemWeekStart(row);
+          return !start || start <= DASHBOARD_MIN_TODAY;
+        });
       const trendRows = summarizeAttendanceRowsByClassWeek(classWeekRows);
       const priorityRows = summarizeAttendanceRowsByStudent(classWeekRows)
         .filter((row) => row.student)
