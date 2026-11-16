@@ -245,11 +245,18 @@
     #drillRowsWrap td.metric-blank { color: #7c5ce7; background: #f7f5ff; }
     #drillRowsWrap td.metric-total { color: #13202f; background: #f8fafc; }
     #drillRowsWrap td.metric-percent { color: #F58220; background: #fff7ed; }
+    #drillDetailPanel { overflow: visible; }
+    #drillDetailPanel #drillRowsWrap { overflow: visible; max-height: none; }
     .table-head-tip { display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; width: 17px; height: 17px; border-radius: 999px; color: #007fc7; background: #dff3fd; font-size: 11px; font-weight: 950; text-transform: none; vertical-align: middle; cursor: help; }
     .table-head-tip { position: relative; }
     .table-head-tip::after { content: "💡  " attr(data-tooltip); position: absolute; left: 50%; top: calc(100% + 9px); z-index: 20; width: 260px; padding: 10px 12px; border: 1px solid #48c7dc; border-radius: 7px; color: #fff; background: #00809d; box-shadow: 0 8px 18px rgba(0, 128, 157, 0.24); font-size: 11px; font-weight: 650; line-height: 1.4; text-align: left; white-space: normal; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, -4px); transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease; }
     .table-head-tip::before { content: ""; position: absolute; left: 50%; top: calc(100% + 3px); z-index: 21; border: 6px solid transparent; border-bottom-color: #00809d; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, -4px); transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease; }
     .table-head-tip:hover::after, .table-head-tip:hover::before, .table-head-tip:focus-visible::after, .table-head-tip:focus-visible::before { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+    .drill-class-metric-tip { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; padding: 2px 6px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-weight: 850; cursor: help; }
+    .drill-class-metric-tip::after { content: attr(data-drill-tooltip); position: absolute; left: 50%; top: calc(100% + 9px); z-index: 30; width: 280px; max-height: 220px; overflow: auto; padding: 10px 12px; border: 1px solid #48c7dc; border-radius: 7px; color: #fff; background: #00809d; box-shadow: 0 8px 18px rgba(0, 128, 157, 0.24); font-size: 11px; font-weight: 650; line-height: 1.45; text-align: left; white-space: pre-line; opacity: 0; visibility: hidden; pointer-events: auto; transform: translate(-50%, -4px); transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease; }
+    .drill-class-metric-tip:hover::after, .drill-class-metric-tip:focus-visible::after { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+    .drill-metric-popover { position: fixed; z-index: 100; width: min(360px, calc(100vw - 24px)); max-height: min(280px, calc(100vh - 24px)); overflow-y: auto; padding: 10px 12px; border: 1px solid #48c7dc; border-radius: 8px; color: #fff; background: #00809d; box-shadow: 0 10px 24px rgba(0, 128, 157, 0.28); font-size: 12px; font-weight: 650; line-height: 1.5; white-space: pre; }
+    .drill-metric-popover-title { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.35); font-weight: 850; white-space: normal; }
     #drillRowsWrap.branch-drill-summary { padding: 10px; background: linear-gradient(180deg, #f8fcff 0%, #ffffff 100%); }
     #drillRowsWrap.branch-drill-summary table { border-spacing: 0 8px; }
     #drillRowsWrap.branch-drill-summary th { padding: 12px 14px; border: 0; color: #52657a; background: #eef8fd; font-size: 12px; letter-spacing: 0; }
@@ -955,6 +962,7 @@
         renderDailyMissingDrill();
       });
       $("drillRows").addEventListener("click", handleDrillRowsClick);
+      document.addEventListener("click", handleDrillMetricPopoverOutside);
       $("drillGradeTabs").addEventListener("click", (event) => {
         const tab = event.target.closest("[data-drill-grade]");
         if (!tab) return;
@@ -3274,6 +3282,12 @@
     }
 
     function handleDrillRowsClick(event) {
+      const metricButton = event.target.closest(".drill-class-metric-tip");
+      if (metricButton) {
+        event.stopPropagation();
+        toggleDrillMetricPopover(metricButton);
+        return;
+      }
       const branchButton = event.target.closest("[data-drill-branch]");
       if (branchButton) {
         const branch = branchButton.dataset.drillBranch || "";
@@ -3285,6 +3299,21 @@
         inactiveDrillStatusFilter = "";
         selectedDrillDate = "";
         drillRenderSignature = "";
+        saveFilterState();
+        renderDrill();
+        return;
+      }
+      const classButton = event.target.closest("[data-drill-class]");
+      if (classButton) {
+        const kelas = classButton.dataset.drillClass || "";
+        if (!kelas) return;
+        setSelectValueIfOption($("drillClassSelect"), kelas);
+        updateDrillStudentOptions();
+        $("drillStudentInput").value = "";
+        inactiveDrillStatusFilter = "";
+        selectedDrillDate = "";
+        drillRenderSignature = "";
+        updateDrillFilterAvailability();
         saveFilterState();
         renderDrill();
         return;
@@ -3303,6 +3332,31 @@
       saveFilterState();
       renderDrill();
       $("drillStudentInput").focus();
+    }
+
+    function toggleDrillMetricPopover(button) {
+      const existing = $("drillMetricPopover");
+      if (existing) existing.remove();
+      if (!button.dataset.drillTooltip) return;
+      const popover = document.createElement("div");
+      popover.id = "drillMetricPopover";
+      popover.className = "drill-metric-popover";
+      popover.innerHTML = `<div class="drill-metric-popover-title">👤 Daftar siswa</div><div>${escapeHtml(button.dataset.drillTooltip).replace(/\n/g, "<br>")}</div>`;
+      document.body.appendChild(popover);
+      const rect = button.getBoundingClientRect();
+      const width = Math.min(360, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+      const below = rect.bottom + 8;
+      const top = below + Math.min(280, window.innerHeight - below - 12) >= below
+        ? below
+        : Math.max(12, rect.top - Math.min(280, window.innerHeight - 24) - 8);
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+    }
+
+    function handleDrillMetricPopoverOutside(event) {
+      if (event.target.closest(".drill-class-metric-tip, #drillMetricPopover")) return;
+      $("drillMetricPopover")?.remove();
     }
 
     function handleDrillSummaryClick(event) {
@@ -3473,6 +3527,10 @@
     function renderInactiveDrillDetail(rows, dates) {
       const selectedBranch = $("branchSelect").value;
       const selectedRows = rows.filter((row) => dates.includes(row.date));
+      if (!$("drillClassSelect").value) {
+        renderAllClassDrillSummary(selectedRows, dates);
+        return;
+      }
       if (!selectedBranch) {
         $("drillSummaryPanel").hidden = true;
         $("drillDetailPanel").hidden = false;
@@ -3521,6 +3579,52 @@
       $("drillDetailPanel").hidden = !inactiveDrillStatusFilter;
       $("drillRowsWrap").hidden = !inactiveDrillStatusFilter;
       if (inactiveDrillStatusFilter) renderDrillRows(selectedBranch ? filteredRows : summarizeInactiveRowsByBranch(selectedRows, dates), selectedRows, selectedBranch ? "inactive" : "inactiveBranch");
+    }
+
+    function renderAllClassDrillSummary(rows, dates) {
+      const selectedBranch = $("branchSelect").value;
+      const classes = [...new Set(data.students
+        .filter((student) => isActiveStudent(student) && hasDrillTarget(student.class) && (!selectedBranch || student.branch === selectedBranch))
+        .map((student) => student.class)
+        .filter(Boolean))].sort(compareClass);
+      const classRows = classes.map((kelas) => {
+        const displayRows = drillDisplayRows(rows.filter((row) => row.class === kelas), kelas, dates[0] || "", "", dates);
+        const studentRecords = new Map(data.students.filter((student) => student.class === kelas && isActiveStudent(student) && (!selectedBranch || student.branch === selectedBranch)).map((student) => [normalizeLookup(student.name), student]));
+        const studentDetails = displayRows.map((row) => ({ ...row, school: studentSchoolName(studentRecords.get(normalizeLookup(row.student)) || row) }));
+        const studentCount = displayRows.length;
+        const reachedTarget = studentDetails.filter((row) => row.target > 0 && row.correct >= row.target).length;
+        const notReachedTarget = studentDetails.filter((row) => row.total > 0 && !(row.target > 0 && row.correct >= row.target)).length;
+        const notDrilled = studentDetails.filter((row) => row.total <= 0).length;
+        const tooltip = (predicate) => studentDetails.filter(predicate).map((row) => `${row.student} | ${row.school || "-"}`).join("\n") || "Tidak ada siswa";
+        return {
+          class: kelas,
+          studentCount,
+          reachedTarget,
+          notReachedTarget,
+          notDrilled,
+          reachedTooltip: tooltip((row) => row.target > 0 && row.correct >= row.target),
+          notReachedTooltip: tooltip((row) => row.total > 0 && !(row.target > 0 && row.correct >= row.target)),
+          notDrilledTooltip: tooltip((row) => row.total <= 0),
+          achievement: studentCount ? Math.round((reachedTarget / studentCount) * 100) : 0
+        };
+      });
+      $("drillSummaryPanel").hidden = true;
+      $("drillDetailPanel").hidden = false;
+      $("studentDrillInsight").hidden = true;
+      $("studentDrillInsight").innerHTML = "";
+      $("drillRowsWrap").hidden = false;
+      $("drillRowsWrap").classList.remove("branch-drill-summary");
+      $("drillRowsTitle").textContent = "Rekap Drill per Kelas";
+      const headers = ["Nama Kelas", "#Siswa", "#Capai Target", "#Belum Capai Target", "#Belum Drill", "%Ach"];
+      $("drillRowsHead").innerHTML = `<tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>`;
+      $("drillRows").innerHTML = classRows.length ? classRows.map((row) => `<tr>
+        <td class="name"><button type="button" class="drill-student-link" data-drill-class="${escapeHtml(row.class)}">${escapeHtml(row.class)}</button></td>
+        <td class="metric metric-target">${numberFmt.format(row.studentCount)}</td>
+        <td class="metric metric-correct"><button type="button" class="drill-class-metric-tip" data-drill-tooltip="${escapeHtml(row.reachedTooltip)}" aria-label="Siswa yang mencapai target">${numberFmt.format(row.reachedTarget)}</button></td>
+        <td class="metric metric-wrong"><button type="button" class="drill-class-metric-tip" data-drill-tooltip="${escapeHtml(row.notReachedTooltip)}" aria-label="Siswa yang belum mencapai target">${numberFmt.format(row.notReachedTarget)}</button></td>
+        <td class="metric metric-blank"><button type="button" class="drill-class-metric-tip" data-drill-tooltip="${escapeHtml(row.notDrilledTooltip)}" aria-label="Siswa yang belum drill">${numberFmt.format(row.notDrilled)}</button></td>
+        <td class="metric metric-percent">${row.achievement}%</td>
+      </tr>`).join("") : `<tr><td colspan="${headers.length}" class="empty">Tidak ada data kelas pada periode ini.</td></tr>`;
     }
 
     function renderInactiveDrillInsight(displayRows, totalActiveStudents, dates = []) {
@@ -4384,7 +4488,7 @@
       dateInput.max = DRILL_MENU_DATE;
       if (dateInput.value !== selectedDailyMissingDrillDate) dateInput.value = selectedDailyMissingDrillDate;
       const selectedClass = $("drillClassSelect").value;
-      $("dailyMissingDrillPanel").hidden = Boolean(selectedClass);
+      $("dailyMissingDrillPanel").hidden = true;
       if (selectedClass) return;
       const selectedBranch = $("branchSelect").value;
       const selectedRegional = $("drillRegionalSelect").value;
