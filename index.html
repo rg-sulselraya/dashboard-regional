@@ -3399,7 +3399,14 @@
         $("drillRowsWrap").hidden = true;
         return;
       }
-      renderDrillSummaryCards([
+      const classSummaryCards = !selectedStudent && selectedClass;
+      renderDrillSummaryCards(classSummaryCards ? [
+        { label: "#Siswa", valueId: "drillTarget", className: "ideal" },
+        { label: "#Capai Target", valueId: "drillCorrect", className: "good" },
+        { label: "#Belum capai Target", valueId: "drillWrong", className: "bad" },
+        { label: "#Tidak Drill", valueId: "drillBlank", className: "violet" },
+        { label: "%Ach", valueId: "drillPercent", className: "permit" }
+      ] : [
         { label: "Target", valueId: "drillTarget", className: "ideal" },
         { label: "Benar", valueId: "drillCorrect", className: "good" },
         { label: "Salah", valueId: "drillWrong", className: "bad" },
@@ -3429,13 +3436,27 @@
       const total = summaryDisplayRows.reduce((sum, row) => sum + row.total, 0);
       const dateTitle = insightDates.length > 1 ? `${numberFmt.format(insightDates.length)} tanggal` : safeFormatLongDate(insightDates[0]);
       $("drillDetailTitle").textContent = `${isStudentDetail ? "Detail Drill Siswa" : selectedClass ? `Siswa Belum Mencapai Target - ${selectedClass}` : "Rekap Drill Semua Kelas"} - ${dateTitle}`;
-      $("drillTargetNote").textContent = "Kelas 12 dan SNBT target 10, lainnya 5";
-      $("drillTarget").textContent = numberFmt.format(target);
-      $("drillCorrect").textContent = numberFmt.format(correct);
-      $("drillWrong").textContent = numberFmt.format(wrong);
-      $("drillBlank").textContent = numberFmt.format(blank);
-      $("drillTotal").textContent = numberFmt.format(total);
-      $("drillPercent").textContent = `${target ? Math.round((correct / target) * 100) : 0}%`;
+      if (classSummaryCards) {
+        const classStudents = displayRows;
+        const reachedTarget = classStudents.filter((row) => row.correct >= row.target && row.target > 0).length;
+        const notReachedTarget = classStudents.filter((row) => row.total > 0 && !(row.correct >= row.target && row.target > 0)).length;
+        const notDrilled = classStudents.filter((row) => row.total <= 0).length;
+        const studentCount = classStudents.length;
+        $("drillTargetNote").textContent = `${numberFmt.format(studentCount)} siswa`;
+        $("drillTarget").textContent = numberFmt.format(studentCount);
+        $("drillCorrect").textContent = numberFmt.format(reachedTarget);
+        $("drillWrong").textContent = numberFmt.format(notReachedTarget);
+        $("drillBlank").textContent = numberFmt.format(notDrilled);
+        $("drillPercent").textContent = `${studentCount ? Math.round((reachedTarget / studentCount) * 100) : 0}%`;
+      } else {
+        $("drillTargetNote").textContent = "Kelas 12 dan SNBT target 10, lainnya 5";
+        $("drillTarget").textContent = numberFmt.format(target);
+        $("drillCorrect").textContent = numberFmt.format(correct);
+        $("drillWrong").textContent = numberFmt.format(wrong);
+        $("drillBlank").textContent = numberFmt.format(blank);
+        $("drillTotal").textContent = numberFmt.format(total);
+        $("drillPercent").textContent = `${target ? Math.round((correct / target) * 100) : 0}%`;
+      }
       renderStudentDrillInsight({ selectedClass, selectedStudent, selectedStudentRecord, dates: insightDates, selectedRows: summaryRows, displayRows: summaryDisplayRows, target, correct, total });
       $("drillRowsWrap").hidden = !shouldShowStudentRows;
       renderDrillRows(displayRows, selectedRows);
